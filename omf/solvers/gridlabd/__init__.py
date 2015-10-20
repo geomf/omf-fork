@@ -66,7 +66,7 @@ def _addGldToPath():
 logger = logging.getLogger(__name__)
 
 
-def runInFilesystem(feederTree, attachments=[], keepFiles=False, workDir=None, glmName=None):
+def runInFilesystem(feederTree, fs, attachments=[], keepFiles=False, workDir=None, glmName=None):
     ''' Execute gridlab in the local filesystem. Return a nice dictionary of results. '''
     logger.info(
         'Running GridLab-D for %d feeders (working dir=%s)', len(feederTree), workDir)
@@ -98,19 +98,20 @@ def runInFilesystem(feederTree, attachments=[], keepFiles=False, workDir=None, g
             glmFile.write(glmString)
         logger.debug('Wrote GLM file: %s', glmName)
         # RUN GRIDLABD IN FILESYSTEM (EXPENSIVE!)
-        with open(pJoin(workDir, 'stdout.txt'), 'w') as stdout, open(pJoin(workDir, 'stderr.txt'), 'w') as stderr, open(pJoin(workDir, 'PID.txt'), 'w') as pidFile:
+        wDir = "tmp"
+        with open(pJoin(wDir, 'stdout.txt'), 'w') as stdout, open(pJoin(wDir, 'stderr.txt'), 'w') as stderr:
             # MAYBEFIX: turn standerr WARNINGS back on once we figure out how
             # to supress the 500MB of lines gridlabd wants to write...
             logger.info(
                 'Running <%s -w %s> in <%s>', binaryName, glmName, workDir)
             proc = subprocess.Popen(
                 [binaryName, '-w', glmName], cwd=workDir, stdout=stdout, stderr=stderr)
-            pidFile.write(str(proc.pid))
+            fs.save(pJoin(workDir, 'PID.txt'), str(proc.pid))
             logger.info('Launched gridlabd with pid=%d', proc.pid)
         returnCode = proc.wait()
         logger.info('gridlabd finished with exit code=%d', returnCode)
         # Build raw JSON output.
-        rawOut = anaDataTree(workDir, lambda x: True)
+        rawOut = anaDataTree(workDir, lambda x: True, fs)
         with open(pJoin(workDir, 'stderr.txt'), 'r') as stderrFile:
             rawOut['stderr'] = stderrFile.read().strip()
         with open(pJoin(workDir, 'stdout.txt'), 'r') as stdoutFile:
@@ -133,7 +134,8 @@ def runInFilesystem(feederTree, attachments=[], keepFiles=False, workDir=None, g
                     time.sleep(2)
         return rawOut
     except:
-        with open(pJoin(workDir, "stderr.txt"), "a+") as stderrFile:
+        wDir = "tmp"
+        with open(pJoin(wDir, "stderr.txt"), "a+") as stderrFile:
             traceback.print_exc(file=stderrFile)
         return {}
 
@@ -187,10 +189,10 @@ def _seriesTranspose(theArray):
     return {i[0]: list(i)[1:] for i in zip(*theArray)}
 
 
-def anaDataTree(studyPath, fileNameTest):
+def anaDataTree(studyPath, fileNameTest, fs):
     ''' Take a study and put all its data into a nested object {fileName:{metricName:[...]}} '''
     data = {}
-    csvFiles = os.listdir(studyPath)
+    csvFiles = fs.listdir(studyPath)
     for cName in csvFiles:
         if fileNameTest(cName) and cName.endswith('.csv'):
             arr = csvToArray(studyPath + '/' + cName)

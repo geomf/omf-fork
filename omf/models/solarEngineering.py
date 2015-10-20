@@ -1,16 +1,9 @@
 # Portions Copyrights (C) 2015 Intel Corporation
 ''' Powerflow results for one Gridlab instance. '''
 
-import json
-import os
 import sys
-import tempfile
-import webbrowser
-import time
 import shutil
 import datetime
-import subprocess
-import math
 import gc
 import networkx as nx
 import matplotlib
@@ -29,23 +22,26 @@ from __metaModel__ import *
 sys.path.append(__metaModel__._omfDir)
 import feeder
 from solvers import gridlabd
+from pyhdfs import HdfsFileNotFoundException
 from weather import zipCodeToClimateName
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "solarEngineering.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
 
-
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
     ''' Render the model template to an HTML string.
     By default render a blank one for new input.
     If modelDir is valid, render results post-model-run.
     If absolutePaths, the HTML can be opened without a server. '''
+
+    # Our HTML template for the interface:
+    with fs.open("models/solarEngineering.html") as tempFile:
+        template = Template(tempFile.read())
+
     try:
-        inJson = json.load(open(pJoin(modelDir, "allInputData.json")))
+        inJson = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
         modelPath, modelName = pSplit(modelDir)
         deepPath, user = pSplit(modelPath)
         inJson["modelName"] = modelName
@@ -54,8 +50,8 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
     except IOError:
         allInputData = None
     try:
-        allOutputData = open(pJoin(modelDir, "allOutputData.json")).read()
-    except IOError:
+        allOutputData = fs.open(pJoin(modelDir, "allOutputData.json")).read()
+    except HdfsFileNotFoundException:
         allOutputData = None
     if absolutePaths:
         # Parent of current folder.
@@ -63,29 +59,28 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
     else:
         pathPrefix = ""
     try:
-        inputDict = json.load(open(pJoin(modelDir, "allInputData.json")))
-    except IOError:
+        inputDict = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
+    except HdfsFileNotFoundException:
         pass
     return template.render(allInputData=allInputData,
-                           allOutputData=allOutputData, modelStatus=getStatus(modelDir), pathPrefix=pathPrefix,
+                           allOutputData=allOutputData, modelStatus=getStatus(modelDir, fs), pathPrefix=pathPrefix,
                            datastoreNames=datastoreNames)
 
 
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in a separate process. web.py calls this to run the model.
     This function will return fast, but results take a while to hit the file system.'''
     # Check whether model exist or not
-    if not os.path.isdir(modelDir):
-        os.makedirs(modelDir)
+    if not fs.exists(modelDir):
+        fs.create_dir(modelDir)
         inputDict["created"] = str(datetime.datetime.now())
     # MAYBEFIX: remove this data dump. Check showModel in web.py and
     # renderTemplate()
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-        json.dump(inputDict, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     # If we are re-running, remove output and old GLD run:
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
-        shutil.rmtree(pJoin(modelDir, "gldContainer"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "gldContainer"))
     except:
         pass
     # Start background process.
@@ -93,55 +88,51 @@ def run(modelDir, inputDict):
         target=heavyProcessing, args=(modelDir, inputDict,))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
-    with open(pJoin(modelDir, "PPID.txt"), "w+") as pPidFile:
-        pPidFile.write(str(backProc.pid))
+    fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
 
-
-def runForeground(modelDir, inputDict):
+def runForeground(modelDir, inputDict, fs):
     ''' Run the model in the current process. WARNING: LONG RUN TIME. '''
     # Check whether model exist or not
     logger.info("Running solarEngineering model... modelDir: %s; inputDict: %s", modelDir, inputDict)
-    if not os.path.isdir(modelDir):
-        os.makedirs(modelDir)
+    if not fs.exists(modelDir):
+        fs.create_dir(modelDir)
         inputDict["created"] = str(datetime.datetime.now())
     # MAYBEFIX: remove this data dump. Check showModel in web.py and
     # renderTemplate()
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-        json.dump(inputDict, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     # If we are re-running, remove output and old GLD run:
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except:
         pass
     try:
-        shutil.rmtree(pJoin(modelDir, "gldContainer"))
+        fs.remove(pJoin(modelDir, "gldContainer"))
     except:
         pass
     # Start process.
-    with open(pJoin(modelDir, "PPID.txt"), "w+") as pPidFile:
-        pPidFile.write('-999')
-    heavyProcessing(modelDir, inputDict)
+    fs.save(pJoin(modelDir, "PPID.txt"), '-999')
+    heavyProcessing(modelDir, inputDict, fs)
 
 
-def heavyProcessing(modelDir, inputDict):
+def heavyProcessing(modelDir, inputDict, fs):
     ''' Run the model in its directory. WARNING: GRIDLAB CAN TAKE HOURS TO COMPLETE. '''
     print "STARTING TO RUN", modelDir
     beginTime = datetime.datetime.now()
     # Get feeder name and data in.
     try:
-        os.mkdir(pJoin(modelDir, 'gldContainer'))
+        fs.create_dir(pJoin(modelDir, 'gldContainer'))
     except:
         pass
     feederDir, feederName = inputDict["feederName"].split("___")
-    shutil.copy(pJoin(__metaModel__._omfDir, "data", "Feeder", feederDir, feederName + ".json"),
+    fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                 pJoin(modelDir, "feeder.json"))
     inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
         inputDict["zipCode"])
-    shutil.copy(pJoin(__metaModel__._omfDir, "data", "Climate", inputDict["climateName"] + ".tmy2"),
+    fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                 pJoin(modelDir, "gldContainer", "climate.tmy2"))
     try:
         startTime = datetime.datetime.now()
-        feederJson = json.load(open(pJoin(modelDir, "feeder.json")))
+        feederJson = json.load(fs.open(pJoin(modelDir, "feeder.json")))
         tree = feederJson["tree"]
         # Set up GLM with correct time and recorders:
         feeder.attachRecorders(tree, "Regulator", "object", "regulator")
@@ -166,7 +157,7 @@ def heavyProcessing(modelDir, inputDict):
         feeder.adjustTime(tree=tree, simLength=float(inputDict["simLength"]),
                           simLengthUnits=inputDict["simLengthUnits"], simStartDate=inputDict["simStartDate"])
         # RUN GRIDLABD IN FILESYSTEM (EXPENSIVE!)
-        rawOut = gridlabd.runInFilesystem(tree, attachments=feederJson["attachments"],
+        rawOut = gridlabd.runInFilesystem(tree, fs, attachments=feederJson["attachments"],
                                           keepFiles=True, workDir=pJoin(modelDir, 'gldContainer'))
         cleanOut = {}
         # Std Err and Std Out
@@ -329,22 +320,21 @@ def heavyProcessing(modelDir, inputDict):
             cleanOut['timeStamps'] = aggSeries(
                 stamps, stamps, lambda x: x[0][0:7], 'months')
         # Write the output.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(cleanOut, outFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(cleanOut, indent=4))
         # Update the runTime in the input file.
         endTime = datetime.datetime.now()
         inputDict["runTime"] = str(
             datetime.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Clean up the PID file.
-        os.remove(pJoin(modelDir, "gldContainer", "PID.txt"))
+        fs.remove(pJoin(modelDir, "gldContainer", "PID.txt"))
         print "DONE RUNNING", modelDir
     except Exception as e:
         print "MODEL CRASHED", e
         # Cancel to get rid of extra background processes.
         try:
-            os.remove(pJoin(modelDir, 'PPID.txt'))
+            fs.remove(pJoin(modelDir, 'PPID.txt'))
         except:
             pass
         thisErr = traceback.format_exc()
@@ -352,15 +342,13 @@ def heavyProcessing(modelDir, inputDict):
         with open(os.path.join(modelDir, 'stderr.txt'), 'w') as errorFile:
             errorFile.write(thisErr)
         # Dump input with error included.
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     finishTime = datetime.datetime.now()
     inputDict["runTime"] = str(
         datetime.timedelta(seconds=int((finishTime - beginTime).total_seconds())))
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-        json.dump(inputDict, inFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     try:
-        os.remove(pJoin(modelDir, "PPID.txt"))
+        fs.remove(pJoin(modelDir, "PPID.txt"))
     except:
         pass
 
@@ -547,6 +535,8 @@ def _groupBy(inL, func):
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     inData = {"simStartDate": "2012-04-01",
               "simLengthUnits": "hours",
               "feederName": "public___Olin Barre GH EOL Solar",
@@ -565,12 +555,12 @@ def _tests():
     # No-input template.
     # renderAndShow(template)
     # Run the model.
-    runForeground(modelLoc, inData)
+    runForeground(modelLoc, fs, inData)
     # Cancel the model.
     # time.sleep(2)
     # cancel(modelLoc)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # Delete the model.
     # shutil.rmtree(modelLoc)
 

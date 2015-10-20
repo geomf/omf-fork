@@ -30,12 +30,12 @@ import omf.calibrate
 from omf.solvers import gridlabd
 from omf.common.plot import Plot
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "_cvrDynamic.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
 
-
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/_cvrDynamic.html") as tempFile:
+        template = Template(tempFile.read())
     return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
 
 
@@ -67,14 +67,13 @@ def returnMag(complexStr):
     return (math.sqrt(real**2 + imag**2)) / 60.0
 
 
-def run(modelDir, inData):
+def run(modelDir, inData, fs):
     ''' Run the model in a separate process. web.py calls this to run the model.
     This function will return fast, but results take a while to hit the file system.'''
-    if not os.path.isdir(modelDir):
-        os.makedirs(modelDir)
+    if not fs.exists(modelDir):
+        fs.create_dir(modelDir)
         inData["created"] = str(datetime.now())
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-        json.dump(inData, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inData, indent=4))
     # If we are re-running, remove output:
     try:
         os.remove(pJoin(modelDir, "allOutputData.json"))
@@ -82,26 +81,24 @@ def run(modelDir, inData):
         pass
     # Start the computation.
     backProc = multiprocessing.Process(
-        target=runForeground, args=(modelDir, inData))
+        target=runForeground, args=(modelDir, inData, fs))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
-    with open(pJoin(modelDir, "PPID.txt"), "w") as pPidFile:
-        pPidFile.write(str(backProc.pid))
+    fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
 
 
-def runForeground(modelDir, inData):
+def runForeground(modelDir, inData, fs):
     '''This reads a glm file, changes the method of powerflow and reruns'''
     try:
         startTime = datetime.now()
         # calibrate and run cvrdynamic
-        feederPath = pJoin(__metaModel__._omfDir, "data", "Feeder", inData[
+        feederPath = pJoin("data", "Feeder", inData[
                            "feederName"].split("___")[0], inData["feederName"].split("___")[1] + '.json')
-        scadaPath = pJoin(
-            __metaModel__._omfDir, "uploads", (inData["scadaFile"] + '.tsv'))
+        scadaPath = pJoin("uploads", (inData["scadaFile"] + '.tsv'))
         omf.calibrate.omfCalibrate(modelDir, feederPath, scadaPath)
         allOutput = {}
         print "here"
-        with open(pJoin(modelDir, "calibratedFeeder.json"), "r") as jsonIn:
+        with fs.open(pJoin(modelDir, "calibratedFeeder.json")) as jsonIn:
             feederJson = json.load(jsonIn)
             localTree = feederJson.get("tree", {})
         for key in localTree:
@@ -191,8 +188,8 @@ def runForeground(modelDir, inData):
         simStartDate = inData['simStart']
         feeder.adjustTime(localTree, HOURS, "hours", simStartDate)
         output = gridlabd.runInFilesystem(
-            localTree, keepFiles=False, workDir=modelDir)
-        os.remove(pJoin(modelDir, "PID.txt"))
+            localTree, fs, keepFiles=False, workDir=modelDir)
+        fs.remove(pJoin(modelDir, "PID.txt"))
         p = output['Zregulator.csv']['power_in.real']
         q = output['Zregulator.csv']['power_in.imag']
         # calculating length of simulation because it migth be different from
@@ -231,8 +228,8 @@ def runForeground(modelDir, inData):
         # running powerflow analysis via gridalab after attaching a regulator
         feeder.adjustTime(localTree, HOURS, "hours", simStartDate)
         output1 = gridlabd.runInFilesystem(
-            localTree, keepFiles=True, workDir=modelDir)
-        os.remove(pJoin(modelDir, "PID.txt"))
+            localTree, fs, keepFiles=True, workDir=modelDir)
+        fs.remove(pJoin(modelDir, "PID.txt"))
         pnew = output1['NewZregulator.csv']['power_in.real']
         qnew = output1['NewZregulator.csv']['power_in.imag']
         # total real and imaginary losses as a function of time
@@ -550,19 +547,17 @@ def runForeground(modelDir, inData):
         endTime = datetime.now()
         inData["runTime"] = str(
             timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inData, inFile, indent=4)
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(allOutput, outFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inData, indent=4))
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(allOutput, indent=4))
         # For autotest, there won't be such file.
         try:
-            os.remove(pJoin(modelDir, "PPID.txt"))
+            fs.remove(pJoin(modelDir, "PPID.txt"))
         except:
             pass
         print "DONE RUNNING", modelDir
     except Exception as e:
         print "Oops, Model Crashed!!!"
-        cancel(modelDir)
+        cancel(modelDir, fs)
         print e
 
 

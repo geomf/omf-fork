@@ -28,51 +28,48 @@ import omf.feeder
 from omf.solvers import gridlabd
 from omf.common.plot import Plot
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "voltageDrop.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
+
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/voltageDrop.html") as tempFile:
+        template = Template(tempFile.read())
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
-
-
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in its directory. '''
     logger.info("Running voltageDrop model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     startTime = dt.datetime.now()
     allOutput = {}
     # Check whether model exist or not
-    if not os.path.isdir(modelDir):
-        os.makedirs(modelDir)
+    if not fs.exists(modelDir):
+        fs.create_dir(modelDir)
         inputDict["created"] = str(dt.datetime.now())
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-        json.dump(inputDict, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     # Copy feeder data into the model directory.
     feederDir, feederName = inputDict["feederName"].split("___")
-    shutil.copy(pJoin(__metaModel__._omfDir, "data", "Feeder", feederDir, feederName + ".json"),
-                pJoin(modelDir, "feeder.json"))
+    fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
+                              pJoin(modelDir, "feeder.json"))
     # Create voltage drop plot.
-    tree = json.load(open(pJoin(modelDir, "feeder.json"))).get("tree", {})
+    tree = json.load(fs.open(pJoin(modelDir, "feeder.json"))).get("tree", {})
     if inputDict.get("layoutAlgorithm", "geospatial") == "geospatial":
         neato = False
     else:
         neato = True
-    chart = voltPlot(tree, workDir=modelDir, neatoLayout=neato)
+    chart = voltPlot(tree, fs, workDir=modelDir, neatoLayout=neato)
     Plot.save_fig(plt, pJoin(modelDir, "output.png"))
     with open(pJoin(modelDir, "output.png"), "rb") as inFile:
         allOutput["voltageDrop"] = inFile.read().encode("base64")
-    with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-        json.dump(allOutput, outFile, indent=4)
+    fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(allOutput, indent=4))
     # Update the runTime in the input file.
     endTime = dt.datetime.now()
     inputDict["runTime"] = str(
         dt.timedelta(seconds=int((endTime - startTime).total_seconds())))
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-        json.dump(inputDict, inFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
 
 
-def voltPlot(tree, workDir=None, neatoLayout=False):
+def voltPlot(tree, fs, workDir=None, neatoLayout=False):
     ''' Draw a color-coded map of the voltage drop on a feeder.
     Returns a matplotlib object. '''
     # Get rid of schedules and climate:
@@ -94,8 +91,8 @@ def voltPlot(tree, workDir=None, neatoLayout=False):
         workDir = tempfile.mkdtemp()
         print "gridlabD runInFilesystem with no specified workDir. Working in", workDir
     gridlabOut = gridlabd.runInFilesystem(
-        tree, attachments=[], workDir=workDir)
-    with open(pJoin(workDir, 'voltDump.csv'), 'r') as dumpFile:
+        tree, fs, attachments=[], workDir=workDir)
+    with fs.open(pJoin(workDir, 'voltDump.csv')) as dumpFile:
         reader = csv.reader(dumpFile)
         reader.next()  # Burn the header.
         keys = reader.next()
@@ -163,7 +160,7 @@ def voltPlot(tree, workDir=None, neatoLayout=False):
     return voltChart
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' Voltage drop runs so fast it's pointless to cancel a run. '''
     pass
 
@@ -175,6 +172,11 @@ def _tests():
     # chart.savefig("/Users/dwp0/Desktop/testChart.png")
     # plt.show()
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
+    # Our HTML template for the interface:
+    with fs.open(pJoin(__metaModel__._myDir, "voltageDrop.html"), "r") as tempFile:
+        template = Template(tempFile.read())
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     inData = {"feederName": "public___Olin Barre Geo",
               "modelType": "voltageDrop",
@@ -188,11 +190,11 @@ def _tests():
         # No previous test results.
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template, fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.
     # time.sleep(2)
     # shutil.rmtree(modelLoc)

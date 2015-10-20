@@ -3,14 +3,13 @@
 
 import json
 import os
-import sys
 import tempfile
 import webbrowser
 import math
-import shutil
 from os.path import join as pJoin
 from os.path import split as pSplit
 import logging
+from pyhdfs import HdfsFileNotFoundException
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,7 @@ _myDir = os.path.dirname(os.path.abspath(__file__))
 _omfDir = os.path.dirname(_myDir)
 
 
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}, quickRender=False):
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}, quickRender=False):
     ''' Render the model template to an HTML string.
     By default render a blank one for new input.
     If modelDir is valid, render results post-model-run.
@@ -28,17 +27,17 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
     logger.debug('Rendering model template... modelDir: %s; absolutePaths: %s; datastoreNames: %s; quickRender: %s',
                  modelDir, absolutePaths, datastoreNames, quickRender)
     try:
-        inJson = json.load(open(pJoin(modelDir, "allInputData.json")))
+        inJson = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
         modelPath, modelName = pSplit(modelDir)
         deepPath, user = pSplit(modelPath)
         inJson["modelName"] = modelName
         inJson["user"] = user
         allInputData = json.dumps(inJson)
-    except IOError:
+    except HdfsFileNotFoundException, IOError:
         allInputData = None
     try:
-        allOutputData = open(pJoin(modelDir, "allOutputData.json")).read()
-    except IOError:
+        allOutputData = fs.open(pJoin(modelDir, "allOutputData.json")).read()
+    except HdfsFileNotFoundException, IOError:
         allOutputData = None
     if absolutePaths:
         # Parent of current folder.
@@ -50,25 +49,26 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
     with open('templates/nrelsObligation.html') as nrels_file:
         nrels_text = nrels_file.read()
     return template.render(allInputData=allInputData,
-                           allOutputData=allOutputData, modelStatus=getStatus(modelDir), pathPrefix=pathPrefix,
+                           allOutputData=allOutputData, modelStatus=getStatus(modelDir, fs), pathPrefix=pathPrefix,
                            datastoreNames=datastoreNames, quickRender=quickRender, footer=footer, nrels_text=nrels_text)
 
 
-def renderAndShow(template, modelDir="", datastoreNames={}):
+def renderAndShow(template, fs, modelDir="", datastoreNames={}):
     ''' Render and open a template (blank or with output) in a local browser. '''
+    "RENDERING results..."
     with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as temp:
         temp.write(
-            renderTemplate(template, modelDir=modelDir, absolutePaths=True))
+            renderTemplate(template, fs, modelDir=modelDir, absolutePaths=True))
         temp.flush()
         webbrowser.open("file://" + temp.name)
 
 
-def getStatus(modelDir):
+def getStatus(modelDir, fs):
     ''' Is the model stopped, running or finished? '''
-    if not os.path.isdir(modelDir):
+    if not fs.exists(modelDir):
         return "preRun"
     try:
-        modFiles = os.listdir(modelDir)
+        modFiles = fs.listdir(modelDir)
     except:
         modFiles = []
     hasInput = "allInputData.json" in modFiles
@@ -85,12 +85,12 @@ def getStatus(modelDir):
         return "stopped"
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' Try to cancel a currently running model. '''
     # Kill GLD process if already been created
     logger.info('Canceling running model... modelDir: %s', modelDir)
     try:
-        with open(pJoin(modelDir, "PID.txt"), "r") as pidFile:
+        with fs.open(pJoin(modelDir, "PID.txt")) as pidFile:
             pid = int(pidFile.read())
             # print "pid " + str(pid)
             os.kill(pid, 15)
@@ -99,7 +99,7 @@ def cancel(modelDir):
         pass
     # Kill runForeground process
     try:
-        with open(pJoin(modelDir, "PPID.txt"), "r") as pPidFile:
+        with fs.open(pJoin(modelDir, "PPID.txt")) as pPidFile:
             pPid = int(pPidFile.read())
             os.kill(pPid, 15)
             logger.info("PPID KILLED")
@@ -107,9 +107,9 @@ def cancel(modelDir):
         pass
     # Remove PID, PPID, and allOutputData file if existed
     try:
-        for fName in os.listdir(modelDir):
+        for fName in fs.listdir(modelDir):
             if fName in ["PID.txt", "PPID.txt", "allOutputData.json"]:
-                os.remove(pJoin(modelDir, fName))
+                fs.remove(pJoin(modelDir, fName))
         logger.info("CANCELED %s", modelDir)
     except:
         pass

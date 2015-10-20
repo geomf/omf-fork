@@ -27,31 +27,33 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "solarRates.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
+
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+
+    with fs.open("models/solarRates.html") as tempFile:
+        template = Template(tempFile.read())
+
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
-
-
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     try:
         ''' Run the model in its directory. '''
         # Check whether model exist or not
         logger.info("Running solarRates model... modelDir: %s; inputDict: %s", modelDir, inputDict)
-        if not os.path.isdir(modelDir):
-            os.makedirs(modelDir)
+        if not fs.exists(modelDir):
+            fs.create_dir(modelDir)
             inputDict["created"] = str(dt.datetime.now())
         # MAYBEFIX: remove this data dump. Check showModel in web.py and
         # renderTemplate()
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-            json.dump(inputDict, inputFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Copy spcific climate data into model directory
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
             inputDict["zipCode"])
-        shutil.copy(pJoin(__metaModel__._omfDir, "data", "Climate", inputDict["climateName"] + ".tmy2"),
+        fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                     pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = dt.datetime.now()
@@ -461,35 +463,36 @@ def run(modelDir, inputDict):
         outData["stdout"] = "Success"
         outData["stderr"] = ""
         # Write the output.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(outData, outFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(outData, indent=4))
         # Update the runTime in the input file.
         endTime = dt.datetime.now()
         inputDict["runTime"] = str(
             dt.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     except:
         # If input range wasn't valid delete output, write error to disk.
         thisErr = traceback.format_exc()
         inputDict['stderr'] = thisErr
         with open(os.path.join(modelDir, 'stderr.txt'), 'w') as errorFile:
             errorFile.write(thisErr)
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         try:
-            os.remove(pJoin(modelDir, "allOutputData.json"))
+             fs.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
-            pass
+             pass
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' solarRates runs so fast it's pointless to cancel a run. '''
     pass
 
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
+
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     # TODO: Fix inData because it's out of date.
     monthlyData = {
@@ -546,16 +549,16 @@ def _tests():
     modelLoc = pJoin(workDir, "admin", "Automated solarRates Testing")
     # Blow away old test results if necessary.
     try:
-        shutil.rmtree(modelLoc)
+        fs.remove(modelLoc)
     except:
         # No previous test results.
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template, fs)
     # Run the model.
     run(modelLoc, inData)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.
     # time.sleep(2)
     # shutil.rmtree(modelLoc)

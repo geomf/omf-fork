@@ -18,6 +18,7 @@ import feeder
 import milToGridlab
 import cymeToGridlab
 import logging
+import filesystem
 from flask.ext.session import Session
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_mail import Mail
@@ -32,6 +33,8 @@ logger = logging.getLogger(__name__)
 app = Flask("web")
 sslify = SSLify(app)
 app.config.from_object(the_config)
+
+fs = filesystem.Filesystem().fs
 
 db = SQLAlchemy(app)
 set_db(db)
@@ -66,7 +69,7 @@ def current_user_name():
 def safeListdir(path):
     ''' Helper function that returns [] for dirs that don't exist. Otherwise new users can cause exceptions. '''
     try:
-        return [x for x in os.listdir(path) if not x.startswith(".")]
+        return [x for x in fs.listdir(path) if not x.startswith(".")]
     except:
         return []
 
@@ -77,8 +80,8 @@ def getDataNames():
         currUser = current_user_name()
     except:
         currUser = "public"
-    feeders = [x[:-5] for x in safeListdir("./data/Feeder/" + currUser)]
-    publicFeeders = [x[:-5] for x in safeListdir("./data/Feeder/public/")]
+    feeders = [x[:-5] for x in safeListdir("data/Feeder/" + currUser)]
+    publicFeeders = [x[:-5] for x in safeListdir("data/Feeder/public/")]
     climates = [x[:-5] for x in safeListdir("./data/Climate/")]
     return {"feeders": sorted(feeders), "publicFeeders": sorted(publicFeeders), "climates": sorted(climates),
             "currentUser": currUser}
@@ -310,7 +313,6 @@ def adminControls():
         return redirect("/")
 
     users = persistence.getAllUsers()
-
     users = [x for x in users if x.role == Role.USER.value]
 
     for user in users:
@@ -346,11 +348,11 @@ def showModel(owner, modelName):
     ''' Render a model template with saved data. '''
     user = persistence.getUser(current_user_name())
     if owner == current_user_name() or user.role == Role.ADMIN.value or owner == Role.PUBLIC.value:
-        modelDir = "./data/Model/" + owner + "/" + modelName
-        with open(modelDir + "/allInputData.json") as inJson:
+        modelDir = "data/Model/" + owner + "/" + modelName
+        with fs.open(modelDir + "/allInputData.json") as inJson:
             modelType = json.load(inJson).get("modelType", "")
         thisModel = getattr(models, modelType)
-        return thisModel.renderTemplate(thisModel.template, modelDir, False, getDataNames())
+        return thisModel.renderTemplate(thisModel.template, fs, modelDir, False, getDataNames())
     else:
         return redirect("/")
 
@@ -360,7 +362,7 @@ def showModel(owner, modelName):
 def newModel(modelType):
     ''' Display the module template for creating a new model. '''
     thisModel = getattr(models, modelType)
-    return thisModel.renderTemplate(thisModel.template, datastoreNames=getDataNames())
+    return thisModel.renderTemplate(thisModel.template, fs, datastoreNames=getDataNames())
 
 
 @app.route("/runModel/", methods=["POST"])
@@ -382,7 +384,7 @@ def runModel():
     modelName = pData["modelName"]
     del pData["modelName"]
     modelModule.run(
-        os.path.join(_omfDir, "data", "Model", owner, modelName), pData)
+        os.path.join("data", "Model", owner, modelName), pData, fs)
     return redirect("/model/" + owner + "/" + modelName)
 
 
@@ -402,15 +404,15 @@ def quickRun():
     user = pData["quickRunEmail"]
     modelName = "QUICKRUN-" + pData["modelType"]
     modelModule.run(
-        os.path.join(_omfDir, "data", "Model", user, modelName), pData)
+        os.path.join("data", "Model", user, modelName), pData)
     return redirect("/quickModel/" + user + "/" + modelName)
 
 
 @app.route("/quickModel/<owner>/<modelName>")
 def quickModel(owner, modelName):
     ''' Render a quickrun model template with saved data. '''
-    modelDir = "./data/Model/" + owner + "/" + modelName
-    with open(modelDir + "/allInputData.json") as inJson:
+    modelDir = "data/Model/" + owner + "/" + modelName
+    with fs.open(modelDir + "/allInputData.json") as inJson:
         modelType = json.load(inJson).get("modelType", "")
     thisModel = getattr(models, modelType)
     return thisModel.quickRender(thisModel.template, modelDir, False, getDataNames())
@@ -423,7 +425,7 @@ def cancelModel():
     pData = request.form.to_dict()
     modelModule = getattr(models, pData["modelType"])
     modelModule.cancel(
-        os.path.join(_omfDir, "data", "Model", pData["user"], pData["modelName"]))
+        os.path.join("data", "Model", pData["user"], pData["modelName"]), fs)
     return redirect("/model/" + pData["user"] + "/" + pData["modelName"])
 
 
@@ -433,15 +435,14 @@ def duplicateModel(owner, modelName):
     user = persistence.getUser(current_user_name())
     newName = request.form.get("newName", "")
     if owner == user.username or user.role == Role.ADMIN.value or owner == Role.PUBLIC.value:
-        destinationPath = "./data/Model/" + user.username + "/" + newName
+        destinationPath = "data/Model/" + user.username + "/" + newName
         logger.info('Copying model: %s, owned by: %s', modelName, owner)
-        shutil.copytree(
-            "./data/Model/" + owner + "/" + modelName, destinationPath)
-        with open(destinationPath + "/allInputData.json", "r") as inFile:
+        fs.copy_within_fs(
+            "data/Model/" + owner + "/" + modelName, destinationPath)
+        with fs.open(destinationPath + "/allInputData.json") as inFile:
             inData = json.load(inFile)
         inData["created"] = str(dt.datetime.now())
-        with open(destinationPath + "/allInputData.json", "w") as outFile:
-            json.dump(inData, outFile, indent=4)
+        fs.save(destinationPath + "/allInputData.json", json.dumps(inData, indent=4))
         logger.info('Copy of model: %s, owned by: %s done', modelName, owner)
         return redirect("/model/" + user.username + "/" + newName)
     else:
@@ -455,14 +456,17 @@ def publishModel(owner, modelName):
     newName = request.form.get("newName", "")
     logger.info('Publishing model: %s with new name: %s', modelName, newName)
     if owner == user.username or user.role == Role.ADMIN.value:
-        destinationPath = "./data/Model/public/" + newName
-        shutil.copytree(
-            "./data/Model/" + owner + "/" + modelName, destinationPath)
-        with open(destinationPath + "/allInputData.json", "r+") as inFile:
+        destinationPath = "data/Model/public/" + newName
+        fs.create_dir(destinationPath)
+
+        fs.copy_within_fs(
+            "data/Model/" + owner + "/" + modelName, destinationPath)
+        with fs.open(destinationPath + "/allInputData.json") as inFile:
             inData = json.load(inFile)
             inData["created"] = str(dt.datetime.now())
             inFile.seek(0)
-            json.dump(inData, inFile, indent=4)
+            s = json.dumps(inData, indent=4)
+            fs.save(destinationPath + "/allInputData.json", s)
         return redirect("/model/public/" + newName)
     else:
         return False
@@ -501,7 +505,7 @@ def feederGetGeo(owner, feederName):
 def getComponents():
     path = "data/Component/"
     components = {
-        name[0:-5]: json.load(open(path + name)) for name in os.listdir(path)}
+        name[0:-5]: json.load(fs.open(path + name)) for name in fs.listdir(path)}
     return json.dumps(components)
 
 
@@ -535,12 +539,13 @@ def gridlabdImport():
 
 # TODO: Check if rename mdb files worked
 
-
 @app.route("/cymeImport/", methods=["POST"])
 @flask_login.login_required
 def cymeImport():
     ''' API for importing a cyme feeder. '''
+    logger.error("IMPORTING MDB file")
     feederName = str(request.form.get("feederName", ""))
+    logger.error("IMPORTING MDB file: "+feederName)
     mdbNetString, mdbEqString = map(
         lambda x: request.files[x], ["mdbNetFile", "mdbEqFile"])
 
@@ -550,12 +555,10 @@ def cymeImport():
 
     return redirect("/#feeders")
 
-
 def startImportProcess(feederName, convertFunc, convertArgs):
     if not os.path.isdir("data/Conversion/" + current_user_name()):
         os.makedirs("data/Conversion/" + current_user_name())
-    with open("data/Conversion/" + current_user_name() + "/" + feederName + ".json", "w+") as conFile:
-        conFile.write("WORKING")
+    fs.save("data/Conversion/" + current_user_name() + "/" + feederName + ".json", "WORKING")
 
     importProc = Process(
         target=importBackground, args=[current_user_name(), feederName, convertFunc, convertArgs])
@@ -572,9 +575,8 @@ def importBackground(owner, feederName, convertFunc, convertArgs):
     with open("./schedules.glm", "r") as schedFile:
         newFeeder["attachments"] = {"schedules.glm": schedFile.read()}
     logger.info('Save new feeder %s as new json file', feederName)
-    with open("data/Feeder/" + owner + "/" + feederName + ".json", "w") as outFile:
-        json.dump(newFeeder, outFile, indent=4)
-    os.remove("data/Conversion/" + owner + "/" + feederName + ".json")
+    fs.save("data/Feeder/" + owner + "/" + feederName + ".json", json.dumps(newFeeder, indent=4))
+    fs.remove("data/Conversion/" + owner + "/" + feederName + ".json")
 
 
 @app.route("/newBlankFeeder/", methods=["POST"])
@@ -583,9 +585,8 @@ def newBlankFeeder():
     '''This function is used for creating a new blank feeder.'''
     feederName = str(request.form.get("feederName", ""))
     logger.info('Creating new blank feeder... feder name: %s', feederName)
-    with open("./static/SimpleFeeder.json", "r") as simpleFeederFile:
-        with open("data/Feeder/" + current_user_name() + "/" + feederName + ".json", "w") as outFile:
-            outFile.write(simpleFeederFile.read())
+    with fs.open("static/SimpleFeeder.json") as simpleFeederFile:
+        fs.save("data/Feeder/" + current_user_name() + "/" + feederName + ".json", simpleFeederFile.read())
     feederLink = "./feeder/" + current_user_name() + "/" + feederName
     return redirect(feederLink)
 
@@ -597,7 +598,7 @@ def feederData(owner, feederName, modelFeeder=False):
     # MAYBEFIX: fix modelFeeder capability.
     user = persistence.getUser(current_user_name())
     if user.role == Role.ADMIN.value or owner == user.username or owner == Role.PUBLIC.value:
-        with open("data/Feeder/" + owner + "/" + feederName + ".json", "r") as feedFile:
+        with fs.open("data/Feeder/" + owner + "/" + feederName + ".json") as feedFile:
             return feedFile.read()
 
 
@@ -608,12 +609,12 @@ def saveFeeder(owner, feederName):
     user = persistence.getUser(current_user_name())
     if user.role == Role.ADMIN.value or owner == user.username or owner == Role.PUBLIC.value:
         # If we have a new user, make sure to make their folder:
-        if not os.path.isdir("data/Feeder/" + owner):
-            os.makedirs("data/Feeder/" + owner)
-        with open("data/Feeder/" + owner + "/" + feederName + ".json", "w") as outFile:
-            payload = json.loads(
-                request.form.to_dict().get("feederObjectJson", "{}"))
-            json.dump(payload, outFile, indent=4)
+        if not fs.exists("data/Feeder/" + owner):
+            fs.create_dir("data/Feeder/" + owner)
+        payload = json.loads(
+            request.form.to_dict().get("feederObjectJson", "{}"))
+        s = json.dumps(payload, indent=4)
+        fs.save("data/Feeder/" + owner + "/" + feederName + ".json", s)
     return redirect("/#feeders")
 
 ###################################################
@@ -649,14 +650,14 @@ def root():
     for mod in allModels:
         try:
             modPath = "data/Model/" + mod["owner"] + "/" + mod["name"]
-            allInput = json.load(open(modPath + "/allInputData.json"))
+            allInput = json.load(fs.open(modPath + "/allInputData.json"))
             mod["runTime"] = allInput.get("runTime", "")
             mod["modelType"] = allInput.get("modelType", "")
             mod["status"] = getattr(
-                models, mod["modelType"]).getStatus(modPath)
+                models, mod["modelType"]).getStatus(modPath, fs)
             # mod["created"] = allInput.get("created","")
             mod["editDate"] = time.strftime(
-                "%Y-%m-%d %H:%M:%S", time.gmtime(os.stat(modPath).st_ctime))
+                "%Y-%m-%d %H:%M:%S", time.gmtime(fs.get_file_modification_time(modPath)))
         except:
             continue
     for feed in allFeeders:
@@ -664,15 +665,16 @@ def root():
             feedPath = "data/Feeder/" + \
                 feed["owner"] + "/" + feed["name"] + ".json"
             feed["editDate"] = time.strftime(
-                "%Y-%m-%d %H:%M:%S", time.gmtime(os.stat(feedPath).st_ctime))
+                "%Y-%m-%d %H:%M:%S", time.gmtime(fs.get_file_modification_time(feedPath)))
         except:
             continue
     for conversion in conversions:
         try:
             convPath = "data/Conversion/" + \
                 conversion["owner"] + "/" + conversion["name"] + ".json"
+            tm = fs.stat(convPath).modificationTime
             conversion["editDate"] = time.strftime(
-                "%Y-%m-%d %H:%M:%S", time.gmtime(os.stat(convPath).st_ctime))
+                "%Y-%m-%d %H:%M:%S", time.gmtime(fs.get_file_modification_time(convPath)))
         except:
             continue
     return render_template("home.html", models=allModels, feeders=allFeeders + conversions,
@@ -687,10 +689,10 @@ def delete(objectType, objectName, owner):
     if owner != user.username and user.role == Role.ADMIN.value:
         return False
     if objectType == "Feeder":
-        os.remove("data/Feeder/" + owner + "/" + objectName + ".json")
+        fs.remove("data/Feeder/" + owner + "/" + objectName + ".json")
         return redirect("/#feeders")
     elif objectType == "Model":
-        shutil.rmtree("data/Model/" + owner + "/" + objectName)
+        fs.remove("data/Model/" + owner + "/" + objectName)
     return redirect("/")
 
 
@@ -709,8 +711,51 @@ def uniqObjName(objtype, owner, name):
         path = "data/Model/" + owner + "/" + name
     elif objtype == "Feeder":
         path = "data/Feeder/" + owner + "/" + name + ".json"
-    return jsonify(exists=os.path.exists(path))
+    return jsonify(exists=fs.exists(path))
 
+
+def populateHdfs():
+    template_files = []
+    model_files = []
+    try:
+        template_files = ["templates/" + x for x in fs.listdir("templates")]
+    except:
+        print "importing templates to hdfs"
+        if fs.import_files_to_hdfs("templates", "templates"):
+            template_files = ["templates/" + x for x in fs.listdir("templates")]
+            shutil.rmtree("templates")
+    try:
+        model_files = ["models/" + x for x in fs.listdir("models")]
+    except:
+        print "importing models to hdfs"
+        if fs.import_files_to_hdfs("models", "models"):
+            model_files = ["models/" + x for x in fs.listdir("models")]
+            shutil.rmtree("models")
+    try:
+        if not fs.exists("data"):
+            fs.recursive_import_to_hdfs("data")
+        #shutil.rmtree("data")
+    except Exception as e:
+        print "Could not import data.... Reason: " + str(e)
+
+    try:
+        if not fs.exists("static"):
+            fs.recursive_import_to_hdfs("static")
+    except Exception as e:
+        print "Could not import data.... Reason: " + str(e)
+
+    if not (os.path.exists(_omfDir + "/tmp")):
+        os.mkdir(_omfDir + "/tmp")
+    if not (os.path.exists(_omfDir + "/tmp/data")):
+        os.mkdir(_omfDir + "/tmp/data")
+    if not (os.path.exists(_omfDir + "/tmp/data/Feeder")):
+        os.mkdir(_omfDir + "/tmp/data/Feeder")
+    if not (os.path.exists(_omfDir + "/tmp/data/Climate")):
+        os.mkdir(_omfDir + "/tmp/data/Climate")
+    if not (os.path.exists(_omfDir + "/tmp/data/Feeder/public")):
+        os.mkdir(_omfDir + "/tmp/data/Feeder/public")
+
+    return template_files, model_files
 
 @app.route("/id")
 def id():
@@ -719,6 +764,5 @@ def id():
 
 if __name__ == "__main__":
     URL = "http://localhost:5000"
-    template_files = ["templates/" + x for x in os.listdir("templates")]
-    model_files = ["models/" + x for x in os.listdir("models")]
+    template_files, model_files = populateHdfs()
     app.run(debug=True, extra_files=template_files + model_files)

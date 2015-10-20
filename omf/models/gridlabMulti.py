@@ -1,48 +1,44 @@
 # Portions Copyright (C) 2015 Intel Corporation
 ''' Powerflow results for one Gridlab instance. '''
 
-import json
-import os
 import sys
-import tempfile
-import webbrowser
 import time
 import shutil
+import feeder
 import datetime
-import subprocess
-import math
 import multiprocessing
-from os.path import join as pJoin
-from os.path import split as pSplit
 import pprint
-from jinja2 import Template
 import traceback
 import __metaModel__
+import logging
+
+from pyhdfs import HdfsFileNotFoundException
+from jinja2 import Template
 from __metaModel__ import *
 
 # OMF imports
 sys.path.append(__metaModel__._omfDir)
-import feeder
 from solvers import gridlabd
 from weather import zipCodeToClimateName
 from flask import session
-import logging
 
 logger = logging.getLogger(__name__)
 pp = pprint.PrettyPrinter(indent=4)
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "gridlabMulti.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
 
-
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
     ''' Render the model template to an HTML string.
     By default render a blank one for new input.
     If modelDir is valid, render results post-model-run.
     If absolutePaths, the HTML can be opened without a server. '''
+
+    # Our HTML template for the interface:
+    with fs.open("models/gridlabMulti.html") as tempFile:
+        template = Template(tempFile.read())
+
     try:
-        inJson = json.load(open(pJoin(modelDir, "allInputData.json")))
+        inJson = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
         modelPath, modelName = pSplit(modelDir)
         deepPath, user = pSplit(modelPath)
         inJson["modelName"] = modelName
@@ -51,8 +47,8 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
     except IOError:
         allInputData = None
     try:
-        allOutputData = open(pJoin(modelDir, "allOutputData.json")).read()
-    except IOError:
+        allOutputData = fs.open(pJoin(modelDir, "allOutputData.json")).read()
+    except HdfsFileNotFoundException:
         allOutputData = None
     if absolutePaths:
         # Parent of current folder.
@@ -62,77 +58,76 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
     feederList = []
     feederIDs = []
     try:
-        inputDict = json.load(open(pJoin(modelDir, "allInputData.json")))
+        inputDict = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
         for key in inputDict:
             if key.startswith("feederName"):
                 feederIDs.append(key)
                 feederList.append(inputDict[key])
-    except IOError:
+    except HdfsFileNotFoundException:
         pass
     with open('templates/footer.html', 'r') as footer_file:
         footer = footer_file.read()
     return template.render(allInputData=allInputData,
-                           allOutputData=allOutputData, modelStatus=getStatus(modelDir), pathPrefix=pathPrefix,
+                           allOutputData=allOutputData, modelStatus=getStatus(modelDir, fs), pathPrefix=pathPrefix,
                            datastoreNames=datastoreNames, feederIDs=feederIDs, feederList=feederList, footer=footer)
 
 
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in a separate process. web.py calls this to run the model.
     This function will return fast, but results take a while to hit the file system.'''
     # Check whether model exist or not
     logging.info("Running gridlabMulti model... modelDir: %s; inputDict: %s", modelDir, inputDict)
-    if not os.path.isdir(modelDir):
-        os.makedirs(modelDir)
+    if not fs.exists(modelDir):
+        fs.create_dir(modelDir)
         inputDict["created"] = str(datetime.datetime.now())
     # MAYBEFIX: remove this data dump. Check showModel in web.py and
     # renderTemplate()
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-        json.dump(inputDict, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     # If we are re-running, remove output:
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except:
         pass
     backProc = multiprocessing.Process(
-        target=runForeground, args=(modelDir, inputDict,))
+        target=runForeground, args=(modelDir, inputDict, fs))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
-    with open(pJoin(modelDir, "PPID.txt"), "w+") as pPidFile:
-        pPidFile.write(str(backProc.pid))
+    fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
 
 
-def runForeground(modelDir, inputDict):
+def runForeground(modelDir, inputDict, fs):
     ''' Run the model in its directory. WARNING: GRIDLAB CAN TAKE HOURS TO COMPLETE. '''
     print "STARTING TO RUN", modelDir
     beginTime = datetime.datetime.now()
     feederList = []
     # Get prepare of data and clean workspace if re-run, If re-run remove all
     # the data in the subfolders
-    for dirs in os.listdir(modelDir):
-        if os.path.isdir(pJoin(modelDir, dirs)):
-            shutil.rmtree(pJoin(modelDir, dirs))
+    # TODO for dirs in fs.listdir(modelDir):
+    #     if fs.exists(pJoin(modelDir, dirs)) and fs.is_dir(pJoin(modelDir, dirs)):
+    #         fs.remove(pJoin(modelDir, dirs))
     # Get each feeder, prepare data in separate folders, and run there.
     for key in sorted(inputDict, key=inputDict.get):
         if key.startswith("feederName"):
             feederDir, feederName = inputDict[key].split("___")
             feederList.append(feederName)
             try:
-                os.remove(pJoin(modelDir, feederName, "allOutputData.json"))
+                fs.remove(pJoin(modelDir, feederName, "allOutputData.json"))
             except Exception, e:
                 pass
-            if not os.path.isdir(pJoin(modelDir, feederName)):
+            if not fs.exists(pJoin(modelDir, feederName)):
                 # create subfolders for feeders
-                os.makedirs(pJoin(modelDir, feederName))
-            shutil.copy(pJoin(__metaModel__._omfDir, "data", "Feeder", feederDir, feederName + ".json"),
-                        pJoin(modelDir, feederName, "feeder.json"))
+                fs.create_dir(pJoin(modelDir, feederName))
+
+            fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
+                                      pJoin(modelDir, feederName, "feeder.json"))
             inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
                 inputDict["zipCode"])
-            shutil.copy(pJoin(__metaModel__._omfDir, "data", "Climate", inputDict["climateName"] + ".tmy2"),
-                        pJoin(modelDir, feederName, "climate.tmy2"))
+            fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
+                                      pJoin(modelDir, feederName, "climate.tmy2"))
             try:
                 startTime = datetime.datetime.now()
                 feederJson = json.load(
-                    open(pJoin(modelDir, feederName, "feeder.json")))
+                    fs.open(pJoin(modelDir, feederName, "feeder.json")))
                 tree = feederJson["tree"]
                 # Set up GLM with correct time and recorders:
                 feeder.attachRecorders(
@@ -152,7 +147,7 @@ def runForeground(modelDir, inputDict):
                 feeder.adjustTime(tree=tree, simLength=float(inputDict["simLength"]),
                                   simLengthUnits=inputDict["simLengthUnits"], simStartDate=inputDict["simStartDate"])
                 # RUN GRIDLABD IN FILESYSTEM (EXPENSIVE!)
-                rawOut = gridlabd.runInFilesystem(tree, attachments=feederJson["attachments"],
+                rawOut = gridlabd.runInFilesystem(tree, fs, attachments=feederJson["attachments"],
                                                   keepFiles=True, workDir=pJoin(modelDir, feederName))
                 cleanOut = {}
                 # Std Err and Std Out
@@ -276,27 +271,26 @@ def runForeground(modelDir, inputDict):
                     cleanOut['timeStamps'] = aggSeries(
                         stamps, stamps, lambda x: x[0][0:7], 'months')
                 # Write the output.
-                with open(pJoin(modelDir, feederName, "allOutputData.json"), "w") as outFile:
-                    json.dump(cleanOut, outFile, indent=4)
+                fs.save(pJoin(modelDir, feederName, "allOutputData.json"), json.dumps(cleanOut, indent=4))
                 # Update the runTime in the input file.
                 endTime = datetime.datetime.now()
                 inputDict["runTime"] = str(
                     datetime.timedelta(seconds=int((endTime - startTime).total_seconds())))
-                with open(pJoin(modelDir, feederName, "allInputData.json"), "w") as inFile:
-                    json.dump(inputDict, inFile, indent=4)
+                fs.save(pJoin(modelDir, feederName, "allInputData.json"), json.dumps(inputDict, indent=4))
                 # Clean up the PID file.
-                os.remove(pJoin(modelDir, feederName, "PID.txt"))
+                fs.remove(pJoin(modelDir, feederName, "PID.txt"))
                 print "DONE RUNNING GRIDLABMULTI", modelDir, feederName
             except Exception as e:
                 print "MODEL CRASHED GRIDLABMULTI", e, modelDir, feederName
-                cancel(pJoin(modelDir, feederName))
+                cancel(pJoin(modelDir, feederName), fs)
                 with open(pJoin(modelDir, feederName, "stderr.txt"), "a+") as stderrFile:
                     traceback.print_exc(file=stderrFile)
     finishTime = datetime.datetime.now()
     inputDict["runTime"] = str(
         datetime.timedelta(seconds=int((finishTime - beginTime).total_seconds())))
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-        json.dump(inputDict, inFile, indent=4)
+
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
+
     # Integrate data into allOutputData.json, if error happens, cancel it
     try:
         output = {}
@@ -304,25 +298,27 @@ def runForeground(modelDir, inputDict):
         numOfFeeders = 0
 
         files = []
-        for froot, _, fname in os.walk(modelDir):
+        for froot, _, fname in fs.walk(modelDir):
             files.extend(
                 [os.path.relpath(os.path.join(froot, f), modelDir) for f in fname])
         logger.info('GridlabD outputs in %s:\n%s', modelDir, pp.pformat(files))
 
-        for root, dirs, files in os.walk(modelDir):
+        for root, dirs, files in fs.walk(modelDir):
+            root = root.replace(fs.HOME_DIR, "")
             # dump error info into dict
-            if "stderr.txt" in files:
-                with open(pJoin(modelDir, root, "stderr.txt"), "r") as stderrFile:
-                    tempString = stderrFile.read()
-                    if "ERROR" in tempString or "FATAL" in tempString or "Traceback" in tempString:
-                        output["failures"][
-                            "feeder_" + str(os.path.split(root)[-1])] = {"stderr": tempString}
-                        continue
+            # if "stderr.txt" in files:
+            #     with open(pJoin(modelDir, root, "stderr.txt"), "r") as stderrFile:
+            #         tempString = stderrFile.read()
+            #         if "ERROR" in tempString or "FATAL" in tempString or "Traceback" in tempString:
+            #             output["failures"][
+            #                 "feeder_" + str(os.path.split(root)[-1])] = {"stderr": tempString}
+            #             continue
             # dump simulated data into dict
             if "allOutputData.json" in files:
-                with open(pJoin(modelDir, root, "allOutputData.json"), "r") as feederOutputData:
+                with fs.open(pJoin(root, "allOutputData.json")) as feederOutputData:
                     numOfFeeders += 1
                     feederOutput = json.load(feederOutputData)
+                    print "Feeder output:  " + json.dumps(feederOutput)
                     # TODO: a better feeder name
                     output["feeder_" + str(os.path.split(root)[-1])] = {}
                     output[
@@ -337,10 +333,9 @@ def runForeground(modelDir, inputDict):
         output["numOfFeeders"] = numOfFeeders
         output["timeStamps"] = feederOutput.get("timeStamps", [])
         output["climate"] = feederOutput.get("climate", [])
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(output, outFile, indent=4)
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(output, indent=4))
         try:
-            os.remove(pJoin(modelDir, "PPID.txt"))
+            fs.remove(pJoin(modelDir, "PPID.txt"))
         except:
             pass
         # Send email to user on successfully run status of model
@@ -349,7 +344,7 @@ def runForeground(modelDir, inputDict):
             print "\n    EMAIL ALERT ON"
             email = session['user_id']
             try:
-                user = json.load(open("data/User/" + email + ".json"))
+                user = json.load(fs.open("data/User/" + email + ".json"))
                 modelPath, modelName = pSplit(modelDir)
                 message = "The model " + "<i>" + str(modelName) + "</i>" + " has successfully completed running. It ran for a total of " + str(
                     inputDict["runTime"]) + " seconds from " + str(beginTime) + ", to " + str(finishTime) + "."
@@ -367,13 +362,13 @@ def runForeground(modelDir, inputDict):
         logger.exception("Gridlab-D model crashed")
         print "MODEL CRASHED GRIDLABMULTI", e, modelDir
         try:
-            os.remove(pJoin(modelDir, "PPID.txt"))
+            fs.remove(pJoin(modelDir, "PPID.txt"))
         except:
             pass
         # Send email to user on failed running status of model
         email = session['user_id']
         try:
-            user = json.load(open("data/User/" + email + ".json"))
+            user = json.load(fs.open("data/User/" + email + ".json"))
             modelPath, modelName = pSplit(modelDir)
             message = "The model " + "<i>" + str(modelName) + "</i>" + " has failed to complete running. It ran for a total of " + str(
                 inputDict["runTime"]) + " seconds from " + str(beginTime) + ", to " + str(finishTime) + "."
@@ -382,7 +377,7 @@ def runForeground(modelDir, inputDict):
             logger.exception(
                 'ERROR: failed to send model completed running email to user %s. Exception', email)
             print "ERROR: failed to send model failed running email to user", email, "with exception", e
-        cancel(modelDir)
+        cancel(modelDir, fs)
 
 
 def avg(inList):
@@ -472,6 +467,8 @@ def _groupBy(inL, func):
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     inData = {"simStartDate": "2012-04-01",
               "simLengthUnits": "hours",
@@ -519,14 +516,14 @@ def _tests():
         # No previous test results.
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template, fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Cancel the model.
     # time.sleep(2)
     # cancel(modelLoc)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
 
     # Delete the model.
     # shutil.rmtree(modelLoc)

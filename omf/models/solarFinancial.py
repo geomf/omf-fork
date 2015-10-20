@@ -28,37 +28,37 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "solarFinancial.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
+
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/solarFinancial.html") as tempFile:
+        template = Template(tempFile.read())
+
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
-
-
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in its directory. '''
     # Delete output file every run if it exists
     logger.info("Running solarFinancial model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except Exception, e:
         pass
     try:
         # Check whether model exist or not
-        if not os.path.isdir(modelDir):
-            os.makedirs(modelDir)
+        if not fs.exists(modelDir):
+            fs.create_dir(modelDir)
             inputDict["created"] = str(dt.datetime.now())
         # MAYBEFIX: remove this data dump. Check showModel in web.py and
         # renderTemplate()
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-            json.dump(inputDict, inputFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Copy spcific climate data into model directory
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
             inputDict["zipCode"])
-        shutil.copy(pJoin(__metaModel__._omfDir, "data", "Climate", inputDict["climateName"] + ".tmy2"),
-                    pJoin(modelDir, "climate.tmy2"))
+        fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
+                                  pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = dt.datetime.now()
         # Set up SAM data structures.
@@ -192,35 +192,33 @@ def run(modelDir, inputDict):
         outData["stdout"] = "Success"
         outData["stderr"] = ""
         # Write the output.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(outData, outFile, indent=4)
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(outData, indent=4))
         # Update the runTime in the input file.
         endTime = dt.datetime.now()
         inputDict["runTime"] = str(
             dt.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
-        _dumpDataToExcel(modelDir)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
+        _dumpDataToExcel(modelDir, fs)
     except:
         # If input range wasn't valid delete output, write error to disk.
         thisErr = traceback.format_exc()
         inputDict['stderr'] = thisErr
         with open(os.path.join(modelDir, 'stderr.txt'), 'w') as errorFile:
             errorFile.write(thisErr)
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         try:
-            os.remove(pJoin(modelDir, "allOutputData.json"))
+            fs.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
             pass
 
 
-def _dumpDataToExcel(modelDir):
+def _dumpDataToExcel(modelDir, fs):
     """ Dump data into .xls file in model workspace """
     # TODO: Think about a universal function
     wb = xlwt.Workbook()
     sh1 = wb.add_sheet("All Input Data")
-    inJson = json.load(open(pJoin(modelDir, "allInputData.json")))
+    inJson = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
     size = len(inJson.keys())
     for i in range(size):
         sh1.write(i, 0, inJson.keys()[i])
@@ -228,7 +226,7 @@ def _dumpDataToExcel(modelDir):
     for i in range(size):
         sh1.write(i, 1, inJson.values()[i])
 
-    outJson = json.load(open(pJoin(modelDir, "allOutputData.json")))
+    outJson = json.load(fs.open(pJoin(modelDir, "allOutputData.json")))
     sh1.write(0, 5, "Lat")
     sh1.write(0, 6, "Lon")
     sh1.write(0, 7, "Elev")
@@ -299,8 +297,8 @@ def _dumpDataToExcel(modelDir):
     filename = "omf.solarFinancial.xls"
     wb.save(pJoin(modelDir, filename))
     outJson["excel"] = filename
-    with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-        json.dump(outJson, outFile, indent=4)
+
+    fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(outJson, indent=4))
 
 
 def _runningSum(inList):
@@ -308,13 +306,15 @@ def _runningSum(inList):
     return [sum(inList[:i + 1]) for (i, val) in enumerate(inList)]
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' solarFinancial runs so fast it's pointless to cancel a run. '''
     pass
 
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     # TODO: Fix inData because it's out of date.
     inData = {"simStartDate": "2013-01-01",
@@ -355,11 +355,11 @@ def _tests():
         # No previous test results.
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template,fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.
     # time.sleep(2)
     # shutil.rmtree(modelLoc)

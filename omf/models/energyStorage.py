@@ -1,18 +1,11 @@
 # Portions Copyrights (C) 2015 Intel Corporation
 ''' Calculate the costs and benefits of energy storage from a distribution utility perspective. '''
 
-import json
-import os
 import sys
-import tempfile
-import webbrowser
-import time
 import shutil
-import subprocess
 import datetime
 import traceback
 import csv
-from os.path import join as pJoin
 from dateutil.parser import parse
 from numpy import npv
 from jinja2 import Template
@@ -29,13 +22,13 @@ import matplotlib.pyplot as plt
 sys.path.append(__metaModel__._omfDir)
 from omf.common.plot import Plot
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "energyStorage.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
 
-
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/energyStorage.html") as tempFile:
+        template = Template(tempFile.read())
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 # def quickRender(template, modelDir="", absolutePaths=False, datastoreNames={}):
 # 	''' Presence of this function indicates we can run the model quickly via a public interface. '''
@@ -43,21 +36,20 @@ def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}
 # datastoreNames, quickRender=True)
 
 
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in its directory. '''
     # Delete output file every run if it exists
     logger.info("Running energyStorage model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except Exception, e:
-        pass
+       pass
     # Check whether model exist or not
     try:
-        if not os.path.isdir(modelDir):
-            os.makedirs(modelDir)
+        if not fs.exists(modelDir):
+            fs.create_dir(modelDir)
             inputDict["created"] = str(datetime.datetime.now())
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-            json.dump(inputDict, inputFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Ready to run.
         startTime = datetime.datetime.now()
         outData = {}
@@ -74,8 +66,7 @@ def run(modelDir, inputDict):
         dodFactor = float(inputDict.get('dodFactor', 85)) / 100.0
         projYears = int(inputDict.get('projYears', 10))
         # Put demand data in to a file for safe keeping.
-        with open(pJoin(modelDir, "demand.csv"), "w") as demandFile:
-            demandFile.write(inputDict['demandCurve'])
+        fs.save(pJoin(modelDir, "demand.csv"), inputDict['demandCurve'])
         # Start running battery simulation.
         # CHANGE
         # battCapacity = cellQuantity * cellCapacity
@@ -84,7 +75,7 @@ def run(modelDir, inputDict):
         battCharge = cellQuantity * chargeRate
         # Most of our data goes inside the dc "table"
         dc = [{'datetime': parse(row['timestamp']), 'power': int(
-            row['power'])} for row in csv.DictReader(open(pJoin(modelDir, "demand.csv")))]
+            row['power'])} for row in csv.DictReader(fs.open(pJoin(modelDir, "demand.csv")))]
         for row in dc:
             row['month'] = row['datetime'].month - 1
             row['weekday'] = row['datetime'].weekday
@@ -185,36 +176,35 @@ def run(modelDir, inputDict):
         outData["stdout"] = "Success"
         outData["stderr"] = ""
         # Write the output.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(outData, outFile, indent=4)
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(outData, indent=4))
         # Update the runTime in the input file.
         endTime = datetime.datetime.now()
         inputDict["runTime"] = str(
             datetime.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     except:
         # If input range wasn't valid delete output, write error to disk.
         thisErr = traceback.format_exc()
         print 'ERROR IN MODEL', modelDir, thisErr
         inputDict['stderr'] = thisErr
-        with open(os.path.join(modelDir, 'stderr.txt'), 'w') as errorFile:
+        with open(os.path.join("tmp", 'stderr.txt'), 'w') as errorFile:
             errorFile.write(thisErr)
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         try:
-            os.remove(pJoin(modelDir, "allOutputData.json"))
+            fs.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
-            pass
+           pass
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' This model runs so fast it's pointless to cancel a run. '''
     pass
 
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     inData = {
         "batteryEfficiency": "92",
@@ -224,7 +214,7 @@ def _tests():
         "dischargeRate": "50",
         "modelType": "energyStorage",
         "chargeRate": "50",
-        "demandCurve": open(pJoin(__metaModel__._omfDir, "scratch", "batteryModel", "OlinBeckenhamScada.csv")).read(),
+        "demandCurve": fs.open(pJoin(__metaModel__._omfDir, "scratch", "batteryModel", "OlinBeckenhamScada.csv")).read(),
         "cellCost": "25000",
         "cellQuantity": "3",
         "runTime": "0:00:03",
@@ -238,11 +228,11 @@ def _tests():
         # No previous test results.
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template, fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.
     # time.sleep(2)
     # shutil.rmtree(modelLoc)

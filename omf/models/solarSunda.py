@@ -12,8 +12,6 @@ import subprocess
 import math
 import datetime as dt
 from numpy import npv, pmt, ppmt, ipmt, irr
-from os.path import join as pJoin
-from os import walk
 from jinja2 import Template
 import __metaModel__
 from __metaModel__ import *
@@ -29,38 +27,39 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "solarSunda.html"), "r") as tempFile:
-    template = Template(tempFile.read())
-    # only has A,  and V
+template = None
+
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/solarSunda.html") as tempFile:
+        template = Template(tempFile.read())
+        # only has A,  and V
+
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
-
-
-def quickRender(template, modelDir="", absolutePaths=False, datastoreNames={}):
+def quickRender(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
     ''' Presence of this function indicates we can run the model quickly via a public interface. '''
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames, quickRender=True)
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames, quickRender=True)
 
 
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in its directory. '''
     # Delete output file every run if it exists.
     logger.info("Running solarSunda model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except Exception, e:
         pass
     try:
         # Check whether model exist or not
-        if not os.path.isdir(modelDir):
-            os.makedirs(modelDir)
+        if not fs.exists(modelDir):
+            fs.create_dir(modelDir)
             inputDict["created"] = str(dt.datetime.now())
         # MAYBEFIX: remove this data dump. Check showModel in web.py and
         # renderTemplate()
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-            json.dump(inputDict, inputFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Set static input data
         simLength = 8760
         simStartDate = "2013-01-01"
@@ -88,7 +87,7 @@ def run(modelDir, inputDict):
             manualTilt = float(inputDict.get("tilt", 0))
         numberInverters = math.ceil(inverterSizeAC / 1000 / 0.5)
         # Copy specific climate data into model directory
-        shutil.copy(pJoin(__metaModel__._omfDir, "data", "Climate", inputDict["climateName"] + ".tmy2"),
+        shutil.copy(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                     pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = dt.datetime.now()
@@ -699,15 +698,15 @@ def run(modelDir, inputDict):
         outData["stdout"] = "Success"
         outData["stderr"] = ""
         # Write the output.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(outData, outFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(outData, indent=4))
         # Update the runTime in the input file.
         endTime = dt.datetime.now()
         inputDict["runTime"] = ""
         inputDict["runTime"] = str(
             dt.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     except:
         # If input range wasn't valid delete output, write error to disk.
         thisErr = traceback.format_exc()
@@ -715,10 +714,10 @@ def run(modelDir, inputDict):
         inputDict['stderr'] = thisErr
         with open(os.path.join(modelDir, 'stderr.txt'), 'w') as errorFile:
             errorFile.write(thisErr)
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         try:
-            os.remove(pJoin(modelDir, "allOutputData.json"))
+            fs.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
             pass
 
@@ -728,13 +727,15 @@ def _runningSum(inList):
     return [sum(inList[:i + 1]) for (i, val) in enumerate(inList)]
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' solarSunda runs so fast it's pointless to cancel a run. '''
     pass
 
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     # TODO: Fix inData because it's out of date.
     inData = {"modelType": "solarSunda",
@@ -783,9 +784,9 @@ def _tests():
     # No-input template.
     # renderAndShow(template)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.
     # time.sleep(2)
     # shutil.rmtree(modelLoc)

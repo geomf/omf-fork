@@ -1,4 +1,3 @@
-#
 # Open Modeling Framework (OMF) Software for simulating power systems behavior
 # Copyright (c) 2015, Intel Corporation.
 #
@@ -12,40 +11,24 @@
 # more details.
 #
 
-#pydotplus
-pyhdfs>=0.1.0
-Flask==0.10.1
-Flask-Login>=0.2,<0.2.999
-Flask-Sslify
-Jinja2==2.7.2
-MarkupSafe==0.21
-Werkzeug==0.10.4
-itsdangerous==0.24
-argparse>=1.2.1
-backports.ssl-match-hostname>=3.4.0.2
-boto>=2.24.0
-networkx==1.9.1
-nose>=1.3.0
-passlib>=1.6.2
-pyparsing==2.0.3
-python-dateutil>=2.2
-six>=1.5.2
-tornado>=3.2
-wsgiref>=0.1.2
-numpy>=1.9.2
-matplotlib>=1.3.1
-xlwt>=0.7.5
-pathlib>=1.0.1
-pyodbc>=3.0.7
-beautifulsoup4>=4.3
-gunicorn==19.3.0
-cffi==0.9.2
-pygraphviz==1.2
-redis
-Flask-Session
-Flask-Mail
-Flask-SQLAlchemy
-Flask-Script
-Flask-Migrate
-psycopg2
-enum34
+
+import os
+import json
+
+def get_service_credentials(service_name):
+    vcap_services = os.getenv('VCAP_SERVICES')
+    if vcap_services:
+        return json.loads(vcap_services)[service_name][0]['credentials']
+    elif service_name == 'cdh':
+        return {
+            'zk_host': '172.17.0.2'
+        }
+    else:
+        return {}
+
+def get_space_name():
+    vcap_application = os.getenv('VCAP_APPLICATION')
+    if vcap_application:
+        return json.loads(vcap_application)['space_name']
+    else:
+        return 'local'

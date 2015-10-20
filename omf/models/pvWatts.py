@@ -25,41 +25,41 @@ import feeder
 from solvers import nrelsam2013
 from weather import zipCodeToClimateName
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "pvWatts.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
 
 
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
+def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/pvWatts.html") as tempFile:
+        template = Template(tempFile.read())
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 
-def quickRender(template, modelDir="", absolutePaths=False, datastoreNames={}):
+def quickRender(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
     ''' Presence of this function indicates we can run the model quickly via a public interface. '''
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames, quickRender=True)
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames, quickRender=True)
 
 
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in its directory. '''
     # Delete output file every run if it exists
     logger.info("Running pvWatts model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except Exception, e:
         pass
     # Check whether model exist or not
     try:
-        if not os.path.isdir(modelDir):
-            os.makedirs(modelDir)
+        if not fs.exists(modelDir):
+            fs.create_dir(modelDir)
             inputDict["created"] = str(datetime.datetime.now())
         # MAYBEFIX: remove this data dump. Check showModel in web.py and
         # renderTemplate()
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-            json.dump(inputDict, inputFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Copy spcific climate data into model directory
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
             inputDict["zipCode"])
-        shutil.copy(pJoin(__metaModel__._omfDir, "data", "Climate", inputDict["climateName"] + ".tmy2"),
+        fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                     pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = datetime.datetime.now()
@@ -144,19 +144,19 @@ def run(modelDir, inputDict):
         outData["stdout"] = "Success"
         outData["stderr"] = ""
         # Write the output.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(outData, outFile, indent=4)
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(outData, indent=4))
         # Update the runTime in the input file.
         endTime = datetime.datetime.now()
         inputDict["runTime"] = str(
             datetime.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     except:
+        pass
         # if input range wasn't valid delete output and pass
         try:
-            os.remove(pJoin(modelDir, "allOutputData.json"))
+            fs.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
+            print e
             pass
 
 
@@ -186,13 +186,15 @@ def _aggData(key, aggFun, simStartDate, simLength, simLengthUnits, ssc, dat):
         return map(aggFun, split)
 
 
-def cancel(modelDir):
+def cancel(modelDir, fs):
     ''' PV Watts runs so fast it's pointless to cancel a run. '''
     pass
 
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
     inData = {"simStartDate": "2012-04-01",
               "simLengthUnits": "hours",
@@ -218,11 +220,11 @@ def _tests():
         # No previous test results.
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template, fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.
     # time.sleep(2)
     # shutil.rmtree(modelLoc)

@@ -24,6 +24,7 @@ from web import app, db
 from common.userRole import Role
 
 import logging
+import web
 
 logging.basicConfig(format='%(asctime)s - %(process)d:%(threadName)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)
@@ -35,6 +36,8 @@ logger = logging.getLogger(__name__)
 manager = Manager(app)
 migrate = Migrate(app, db)
 manager.add_command('db', MigrateCommand)
+
+web.populateHdfs()
 
 @manager.command
 def populate_database():

@@ -1,4 +1,3 @@
-#
 # Open Modeling Framework (OMF) Software for simulating power systems behavior
 # Copyright (c) 2015, Intel Corporation.
 #
@@ -12,40 +11,19 @@
 # more details.
 #
 
-#pydotplus
-pyhdfs>=0.1.0
-Flask==0.10.1
-Flask-Login>=0.2,<0.2.999
-Flask-Sslify
-Jinja2==2.7.2
-MarkupSafe==0.21
-Werkzeug==0.10.4
-itsdangerous==0.24
-argparse>=1.2.1
-backports.ssl-match-hostname>=3.4.0.2
-boto>=2.24.0
-networkx==1.9.1
-nose>=1.3.0
-passlib>=1.6.2
-pyparsing==2.0.3
-python-dateutil>=2.2
-six>=1.5.2
-tornado>=3.2
-wsgiref>=0.1.2
-numpy>=1.9.2
-matplotlib>=1.3.1
-xlwt>=0.7.5
-pathlib>=1.0.1
-pyodbc>=3.0.7
-beautifulsoup4>=4.3
-gunicorn==19.3.0
-cffi==0.9.2
-pygraphviz==1.2
-redis
-Flask-Session
-Flask-Mail
-Flask-SQLAlchemy
-Flask-Script
-Flask-Migrate
-psycopg2
-enum34
+
+import hdfs
+import vcap_parser
+import localfs
+
+class Filesystem(object):
+
+    HOME_DIR = '/user/omf/' # + vcap_parser.get_space_name() + '/'
+
+    def __init__(self):
+        credentials = vcap_parser.get_service_credentials('hdfs')
+        if credentials and credentials['HADOOP_CONFIG_KEY'] != {}:
+            self.fs = hdfs.Hdfs()
+        else:
+            self.fs = localfs.Localfs()
+

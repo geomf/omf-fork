@@ -1,20 +1,11 @@
 # Portions Copyrights (C) 2015 Intel Corporation
 ''' Calculate CVR impacts using a targetted set of static loadflows. '''
 
-import json
-import os
 import sys
-import tempfile
-import webbrowser
-import time
 import shutil
 import datetime
-import subprocess
-import math
-import re
 import multiprocessing
 from copy import copy
-from os.path import join as pJoin
 from jinja2 import Template
 from matplotlib import pyplot as plt
 import __metaModel__
@@ -28,13 +19,13 @@ from omf.common.plot import Plot
 
 logger = logging.getLogger(__name__)
 
-# Our HTML template for the interface:
-with open(pJoin(__metaModel__._myDir, "cvrStatic.html"), "r") as tempFile:
-    template = Template(tempFile.read())
+template = None
 
-
-def renderTemplate(template, modelDir="", absolutePaths=False, datastoreNames={}):
-    return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
+def renderTemplate(template, fs, modelDir="MyModel", absolutePaths=False, datastoreNames={}):
+    # Our HTML template for the interface:
+    with fs.open("models/cvrStatic.html") as tempFile:
+        template = Template(tempFile.read())
+    return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
 
 
 def _roundOne(x, direc):
@@ -49,41 +40,38 @@ def _roundOne(x, direc):
         raise Exception
 
 
-def run(modelDir, inputDict):
+def run(modelDir, inputDict, fs):
     ''' Run the model in a separate process. web.py calls this to run the model.
     This function will return fast, but results take a while to hit the file system.'''
     logger.info("Running cvrStatic model... modelDir: %s; inputDict: %s", modelDir, inputDict)
-    if not os.path.isdir(modelDir):
-        os.makedirs(modelDir)
+    if not fs.exists(modelDir):
+        fs.create_dir(modelDir)
         inputDict["created"] = str(datetime.datetime.now())
     # MAYBEFIX: remove this data dump. Check showModel in web.py and
     # renderTemplate()
-    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
-        json.dump(inputDict, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     feederDir, feederName = inputDict["feederName"].split("___")
-    shutil.copy(pJoin(__metaModel__._omfDir, "data", "Feeder", feederDir, feederName + ".json"),
+    fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                 pJoin(modelDir, "feeder.json"))
     # If we are re-running, remove output:
     try:
-        os.remove(pJoin(modelDir, "allOutputData.json"))
+        fs.remove(pJoin(modelDir, "allOutputData.json"))
     except:
         pass
     # Start the computation.
     backProc = multiprocessing.Process(
-        target=runForeground, args=(modelDir, inputDict))
+        target=runForeground, args=(modelDir, inputDict, fs))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
-    with open(pJoin(modelDir, "PPID.txt"), "w") as pPidFile:
-        pPidFile.write(str(backProc.pid))
+    fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
 
-
-def runForeground(modelDir, inputDict):
+def runForeground(modelDir, inputDict, fs):
     ''' Run the model in the foreground. WARNING: can take about a minute. '''
     # Global vars, and load data from the model directory.
     print "STARTING TO RUN", modelDir
     try:
         startTime = datetime.datetime.now()
-        feederJson = json.load(open(pJoin(modelDir, "feeder.json")))
+        feederJson = json.load(fs.open(pJoin(modelDir, "feeder.json")))
         tree = feederJson.get("tree", {})
         attachments = feederJson.get("attachments", {})
         allOutput = {}
@@ -299,9 +287,9 @@ def runForeground(modelDir, inputDict):
                     tree[regConfIndex]['tap_pos_B'] = str(newTapPos)
                     tree[regConfIndex]['tap_pos_C'] = str(newTapPos)
                 # Run the model through gridlab and put outputs in the table.
-                output = gridlabd.runInFilesystem(tree, attachments=attachments,
+                output = gridlabd.runInFilesystem(tree, fs, attachments=attachments,
                                                   keepFiles=True, workDir=modelDir)
-                os.remove(pJoin(modelDir, "PID.txt"))
+                fs.remove(pJoin(modelDir, "PID.txt"))
                 p = output['Zregulator.csv']['power_in.real'][0]
                 q = output['Zregulator.csv']['power_in.imag'][0]
                 s = math.sqrt(p**2 + q**2)
@@ -466,14 +454,12 @@ def runForeground(modelDir, inputDict):
         endTime = datetime.datetime.now()
         inputDict["runTime"] = str(
             datetime.timedelta(seconds=int((endTime - startTime).total_seconds())))
-        with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
-            json.dump(inputDict, inFile, indent=4)
+        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         # Write output file.
-        with open(pJoin(modelDir, "allOutputData.json"), "w") as outFile:
-            json.dump(allOutput, outFile, indent=4)
+        fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(allOutput, indent=4))
         # For autotest, there won't be such file.
         try:
-            os.remove(pJoin(modelDir, "PPID.txt"))
+            fs.remove(pJoin(modelDir, "PPID.txt"))
         except:
             pass
         print "DONE RUNNING", modelDir
@@ -485,10 +471,12 @@ def runForeground(modelDir, inputDict):
 
 def _tests():
     # Variables
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")
-    friendshipTree = json.load(open(pJoin(
+    friendshipTree = json.load(fs.open(pJoin(
         __metaModel__._omfDir, "data", "Feeder", "public", "ABEC Frank LO.json")))["tree"]
-    colomaTree = json.load(open(pJoin(
+    colomaTree = json.load(fs.open(pJoin(
         __metaModel__._omfDir, "data", "Feeder", "public", "ABEC Columbia.json")))["tree"]
     colomaMonths = {"janAvg": 914000.0, "janPeak": 1290000.0,
                     "febAvg": 897000.00, "febPeak": 1110000.0,
@@ -539,11 +527,11 @@ def _tests():
     except:
         pass
     # No-input template.
-    renderAndShow(template)
+    renderAndShow(template, fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # # Show the output.
-    renderAndShow(template, modelDir=modelLoc)
+    renderAndShow(template, fs, modelDir=modelLoc)
     # # # Delete the model.
     # # time.sleep(2)
     # # shutil.rmtree(modelLoc)
