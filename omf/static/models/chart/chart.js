@@ -41,12 +41,13 @@ var Chart = (function () {
         function tickFormat(d) {
             if (even) {
                 even = false;
+                var value = d.toFixed(2);
                 if (max / 1000000 > 1) {
-                    return d / 1000000 + "M"
+                    return value / 1000000 + "M"
                 } else if (max / 1000 > 1) {
-                    return d / 1000 + "k"
+                    return value / 1000 + "k"
                 } else {
-                    return d;
+                    return value;
                 }
             }
             even = true;

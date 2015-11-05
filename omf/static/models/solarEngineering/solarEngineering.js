@@ -68,6 +68,7 @@
         $(".toggle").click(function () {
             $(this).parent().next().toggle(500)
         })
+        $("#feederChangeButton").click(function () {editFeeder(this)});
     })
 
 

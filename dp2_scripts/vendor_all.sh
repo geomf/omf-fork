@@ -11,6 +11,16 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 #
+
+if [[ -f ]]; then
+#uninstall python
+    rm -rf ${INSTALL_DIR}/* -r || true
+#uninstall wheels
+    rm ${THIS_FILE_DIR}/../vendor/*.whl || true
+#uninstall deb packages
+    rm ${THIS_FILE_DIR}/../vendor/*.deb || true
+fi
+
 echo "Get python 2.7.9 and prepare Virtual Env"
 ./get_python.sh
 

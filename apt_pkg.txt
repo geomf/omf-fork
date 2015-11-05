@@ -1,0 +1,14 @@
+pkg-config
+libffi-dev
+python-dev
+libpq-dev
+libmemcached-dev
+libpng-dev
+libfreetype6-dev
+libgraphviz-dev
+unixodbc
+unixodbc-dev
+graphviz
+mdbtools
+ffmpeg
+gstreamer0.10-ffmpeg
