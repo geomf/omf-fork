@@ -12,14 +12,22 @@
 # more details.
 #
 
-if [[ -f ]]; then
-#uninstall python
-    rm -rf ${INSTALL_DIR}/* -r || true
-#uninstall wheels
-    rm ${THIS_FILE_DIR}/../vendor/*.whl || true
-#uninstall deb packages
-    rm ${THIS_FILE_DIR}/../vendor/*.deb || true
-fi
+THIS_FILE_DIR=$(cd $(dirname $0); pwd)
+INSTALL_DIR=$HOME/.localpython
+
+while getopts “f” OPTION
+do
+     case $OPTION in
+         f)
+		#uninstall python
+			rm -rf ${INSTALL_DIR}/* -r || true
+		#uninstall wheels
+			rm ${THIS_FILE_DIR}/../vendor/*.whl || true
+		#uninstall deb packages
+			rm ${THIS_FILE_DIR}/../vendor/*.deb || true
+			;;
+     esac
+done
 
 echo "Get python 2.7.9 and prepare Virtual Env"
 ./get_python.sh

@@ -18,10 +18,18 @@ set -x
 PYTHON_DIR=$HOME/.localpython
 THIS_FILE_DIR=$(cd $(dirname $0); pwd)
 
+if grep -q "mc3man/trusty-media" /etc/apt/sources.list /etc/apt/sources.list.d/*; then
+    echo "Repo ppa:mc3man/trusty-media already exist"
+else
+    sudo add-apt-repository ppa:mc3man/trusty-media -y
+    sudo apt-get update
+fi
+
 #local compile dependencies
 REQUIRED_APT_PACKAGES=`cat $THIS_FILE_DIR/../apt_pkg.txt`
 for PKG in $REQUIRED_APT_PACKAGES; do
   dpkg-query -W $PKG || sudo apt-get -y install $PKG
+  sudo apt-get install -fy
 done
 
 

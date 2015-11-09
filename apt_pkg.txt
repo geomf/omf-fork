@@ -1,4 +1,11 @@
 pkg-config
+libmdbodbc1
+libmdb2
+libmdbsql2
+odbcinst1debian2
+libpq5
+krb5-multidev
+comerr-dev
 libffi-dev
 python-dev
 libpq-dev
