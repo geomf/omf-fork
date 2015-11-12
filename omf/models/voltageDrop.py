@@ -43,21 +43,22 @@ def run(modelDir, inputDict, fs):
     startTime = dt.datetime.now()
     allOutput = {}
     # Check whether model exist or not
-    if not fs.exists(modelDir):
-        fs.create_dir(modelDir)
-        inputDict["created"] = str(dt.datetime.now())
-    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
+    if not os.path.isdir(modelDir):
+        os.makedirs(modelDir)
+    inputDict["created"] = str(dt.datetime.now())
+    with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
+        json.dump(inputDict, inputFile, indent=4)
     # Copy feeder data into the model directory.
     feederDir, feederName = inputDict["feederName"].split("___")
-    fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
+    fs.export_from_fs_to_local(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                               pJoin(modelDir, "feeder.json"))
     # Create voltage drop plot.
-    tree = json.load(fs.open(pJoin(modelDir, "feeder.json"))).get("tree", {})
+    tree = json.load(open(pJoin(modelDir, "feeder.json"))).get("tree", {})
     if inputDict.get("layoutAlgorithm", "geospatial") == "geospatial":
         neato = False
     else:
         neato = True
-    chart = voltPlot(tree, fs, workDir=modelDir, neatoLayout=neato)
+    chart = voltPlot(tree, workDir=modelDir, neatoLayout=neato)
     Plot.save_fig(plt, pJoin(modelDir, "output.png"))
     with open(pJoin(modelDir, "output.png"), "rb") as inFile:
         allOutput["voltageDrop"] = inFile.read().encode("base64")
@@ -69,7 +70,7 @@ def run(modelDir, inputDict, fs):
     fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
 
 
-def voltPlot(tree, fs, workDir=None, neatoLayout=False):
+def voltPlot(tree, workDir=None, neatoLayout=False):
     ''' Draw a color-coded map of the voltage drop on a feeder.
     Returns a matplotlib object. '''
     # Get rid of schedules and climate:
@@ -91,8 +92,8 @@ def voltPlot(tree, fs, workDir=None, neatoLayout=False):
         workDir = tempfile.mkdtemp()
         print "gridlabD runInFilesystem with no specified workDir. Working in", workDir
     gridlabOut = gridlabd.runInFilesystem(
-        tree, fs, attachments=[], workDir=workDir)
-    with fs.open(pJoin(workDir, 'voltDump.csv')) as dumpFile:
+        tree, attachments=[], workDir=workDir)
+    with open(pJoin(workDir, 'voltDump.csv'), 'r') as dumpFile:
         reader = csv.reader(dumpFile)
         reader.next()  # Burn the header.
         keys = reader.next()
@@ -160,7 +161,7 @@ def voltPlot(tree, fs, workDir=None, neatoLayout=False):
     return voltChart
 
 
-def cancel(modelDir, fs):
+def cancel(modelDir):
     ''' Voltage drop runs so fast it's pointless to cancel a run. '''
     pass
 

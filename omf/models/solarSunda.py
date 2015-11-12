@@ -727,7 +727,7 @@ def _runningSum(inList):
     return [sum(inList[:i + 1]) for (i, val) in enumerate(inList)]
 
 
-def cancel(modelDir, fs):
+def cancel(modelDir):
     ''' solarSunda runs so fast it's pointless to cancel a run. '''
     pass
 

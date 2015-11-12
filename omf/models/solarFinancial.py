@@ -44,20 +44,22 @@ def run(modelDir, inputDict, fs):
     logger.info("Running solarFinancial model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     try:
         fs.remove(pJoin(modelDir, "allOutputData.json"))
+        os.remove(pJoin(modelDir, "allOutputData.json"))
     except Exception, e:
         pass
     try:
         # Check whether model exist or not
-        if not fs.exists(modelDir):
-            fs.create_dir(modelDir)
+        if not os.path.isdir(modelDir):
+            os.makedirs(modelDir)
             inputDict["created"] = str(dt.datetime.now())
         # MAYBEFIX: remove this data dump. Check showModel in web.py and
         # renderTemplate()
-        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
+        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
+            json.dump(inputDict, inputFile, indent=4)
         # Copy spcific climate data into model directory
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
             inputDict["zipCode"])
-        fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
+        fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                                   pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = dt.datetime.now()
@@ -209,6 +211,7 @@ def run(modelDir, inputDict, fs):
         fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
         try:
             fs.remove(pJoin(modelDir, "allOutputData.json"))
+            os.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
             pass
 
@@ -306,7 +309,7 @@ def _runningSum(inList):
     return [sum(inList[:i + 1]) for (i, val) in enumerate(inList)]
 
 
-def cancel(modelDir, fs):
+def cancel(modelDir):
     ''' solarFinancial runs so fast it's pointless to cancel a run. '''
     pass
 

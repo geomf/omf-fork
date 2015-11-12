@@ -196,7 +196,7 @@ def run(modelDir, inputDict, fs):
            pass
 
 
-def cancel(modelDir, fs):
+def cancel(modelDir):
     ''' This model runs so fast it's pointless to cancel a run. '''
     pass
 

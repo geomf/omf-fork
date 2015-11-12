@@ -46,20 +46,22 @@ def run(modelDir, inputDict, fs):
     logger.info("Running pvWatts model... modelDir: %s; inputDict: %s", modelDir, inputDict)
     try:
         fs.remove(pJoin(modelDir, "allOutputData.json"))
+        os.remove(pJoin(modelDir, "allOutputData.json"))
     except Exception, e:
         pass
     # Check whether model exist or not
     try:
-        if not fs.exists(modelDir):
-            fs.create_dir(modelDir)
+        if not os.path.isdir(modelDir):
+            os.makedirs(modelDir)
             inputDict["created"] = str(datetime.datetime.now())
         # MAYBEFIX: remove this data dump. Check showModel in web.py and
         # renderTemplate()
-        fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
+        with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
+            json.dump(inputDict, inputFile, indent=4)
         # Copy spcific climate data into model directory
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
             inputDict["zipCode"])
-        fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
+        fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                     pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = datetime.datetime.now()
@@ -151,10 +153,10 @@ def run(modelDir, inputDict, fs):
             datetime.timedelta(seconds=int((endTime - startTime).total_seconds())))
         fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     except:
-        pass
         # if input range wasn't valid delete output and pass
         try:
             fs.remove(pJoin(modelDir, "allOutputData.json"))
+            os.remove(pJoin(modelDir, "allOutputData.json"))
         except Exception, e:
             print e
             pass
@@ -186,7 +188,7 @@ def _aggData(key, aggFun, simStartDate, simLength, simLengthUnits, ssc, dat):
         return map(aggFun, split)
 
 
-def cancel(modelDir, fs):
+def cancel(modelDir):
     ''' PV Watts runs so fast it's pointless to cancel a run. '''
     pass
 

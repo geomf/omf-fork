@@ -84,7 +84,8 @@ def run(modelDir, inData, fs):
         target=runForeground, args=(modelDir, inData, fs))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
-    fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
+    with open(pJoin(modelDir, "PPID.txt"), "w") as pPidFile:
+        pPidFile.write(str(backProc.pid))
 
 
 def runForeground(modelDir, inData, fs):
@@ -92,13 +93,16 @@ def runForeground(modelDir, inData, fs):
     try:
         startTime = datetime.now()
         # calibrate and run cvrdynamic
+
         feederPath = pJoin("data", "Feeder", inData[
                            "feederName"].split("___")[0], inData["feederName"].split("___")[1] + '.json')
+        fs.export_from_fs_to_local(feederPath, feederPath)
         scadaPath = pJoin("uploads", (inData["scadaFile"] + '.tsv'))
+        fs.export_from_fs_to_local(scadaPath, scadaPath)
         omf.calibrate.omfCalibrate(modelDir, feederPath, scadaPath)
         allOutput = {}
         print "here"
-        with fs.open(pJoin(modelDir, "calibratedFeeder.json")) as jsonIn:
+        with open(pJoin(modelDir, "calibratedFeeder.json"), "r") as jsonIn:
             feederJson = json.load(jsonIn)
             localTree = feederJson.get("tree", {})
         for key in localTree:
@@ -188,8 +192,8 @@ def runForeground(modelDir, inData, fs):
         simStartDate = inData['simStart']
         feeder.adjustTime(localTree, HOURS, "hours", simStartDate)
         output = gridlabd.runInFilesystem(
-            localTree, fs, keepFiles=False, workDir=modelDir)
-        fs.remove(pJoin(modelDir, "PID.txt"))
+            localTree, keepFiles=False, workDir=modelDir)
+        os.remove(pJoin(modelDir, "PID.txt"))
         p = output['Zregulator.csv']['power_in.real']
         q = output['Zregulator.csv']['power_in.imag']
         # calculating length of simulation because it migth be different from
@@ -228,8 +232,8 @@ def runForeground(modelDir, inData, fs):
         # running powerflow analysis via gridalab after attaching a regulator
         feeder.adjustTime(localTree, HOURS, "hours", simStartDate)
         output1 = gridlabd.runInFilesystem(
-            localTree, fs, keepFiles=True, workDir=modelDir)
-        fs.remove(pJoin(modelDir, "PID.txt"))
+            localTree, keepFiles=True, workDir=modelDir)
+        os.remove(pJoin(modelDir, "PID.txt"))
         pnew = output1['NewZregulator.csv']['power_in.real']
         qnew = output1['NewZregulator.csv']['power_in.imag']
         # total real and imaginary losses as a function of time
@@ -551,13 +555,13 @@ def runForeground(modelDir, inData, fs):
         fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(allOutput, indent=4))
         # For autotest, there won't be such file.
         try:
-            fs.remove(pJoin(modelDir, "PPID.txt"))
+            os.remove(pJoin(modelDir, "PPID.txt"))
         except:
             pass
         print "DONE RUNNING", modelDir
     except Exception as e:
         print "Oops, Model Crashed!!!"
-        cancel(modelDir, fs)
+        cancel(modelDir)
         print e
 
 

@@ -124,11 +124,11 @@ def heavyProcessing(modelDir, inputDict, fs):
     except:
         pass
     feederDir, feederName = inputDict["feederName"].split("___")
-    fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
+    fs.export_from_fs_to_local(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                 pJoin(modelDir, "feeder.json"))
     inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
         inputDict["zipCode"])
-    fs.copy_within_fs(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
+    fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                 pJoin(modelDir, "gldContainer", "climate.tmy2"))
     try:
         startTime = datetime.datetime.now()
@@ -157,7 +157,7 @@ def heavyProcessing(modelDir, inputDict, fs):
         feeder.adjustTime(tree=tree, simLength=float(inputDict["simLength"]),
                           simLengthUnits=inputDict["simLengthUnits"], simStartDate=inputDict["simStartDate"])
         # RUN GRIDLABD IN FILESYSTEM (EXPENSIVE!)
-        rawOut = gridlabd.runInFilesystem(tree, fs, attachments=feederJson["attachments"],
+        rawOut = gridlabd.runInFilesystem(tree, attachments=feederJson["attachments"],
                                           keepFiles=True, workDir=pJoin(modelDir, 'gldContainer'))
         cleanOut = {}
         # Std Err and Std Out

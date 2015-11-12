@@ -44,14 +44,14 @@ def run(modelDir, inputDict, fs):
     ''' Run the model in a separate process. web.py calls this to run the model.
     This function will return fast, but results take a while to hit the file system.'''
     logger.info("Running cvrStatic model... modelDir: %s; inputDict: %s", modelDir, inputDict)
-    if not fs.exists(modelDir):
-        fs.create_dir(modelDir)
+    if not os.path.isdir(modelDir):
+        os.makedirs(modelDir)
         inputDict["created"] = str(datetime.datetime.now())
     # MAYBEFIX: remove this data dump. Check showModel in web.py and
     # renderTemplate()
     fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     feederDir, feederName = inputDict["feederName"].split("___")
-    fs.copy_within_fs(pJoin("data", "Feeder", feederDir, feederName + ".json"),
+    fs.export_from_fs_to_local(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                 pJoin(modelDir, "feeder.json"))
     # If we are re-running, remove output:
     try:
@@ -63,7 +63,8 @@ def run(modelDir, inputDict, fs):
         target=runForeground, args=(modelDir, inputDict, fs))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
-    fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
+    with open(pJoin(modelDir, "PPID.txt"), "w") as pPidFile:
+        pPidFile.write(str(backProc.pid))
 
 def runForeground(modelDir, inputDict, fs):
     ''' Run the model in the foreground. WARNING: can take about a minute. '''
@@ -71,7 +72,7 @@ def runForeground(modelDir, inputDict, fs):
     print "STARTING TO RUN", modelDir
     try:
         startTime = datetime.datetime.now()
-        feederJson = json.load(fs.open(pJoin(modelDir, "feeder.json")))
+        feederJson = json.load(open(pJoin(modelDir, "feeder.json")))
         tree = feederJson.get("tree", {})
         attachments = feederJson.get("attachments", {})
         allOutput = {}
@@ -287,9 +288,9 @@ def runForeground(modelDir, inputDict, fs):
                     tree[regConfIndex]['tap_pos_B'] = str(newTapPos)
                     tree[regConfIndex]['tap_pos_C'] = str(newTapPos)
                 # Run the model through gridlab and put outputs in the table.
-                output = gridlabd.runInFilesystem(tree, fs, attachments=attachments,
+                output = gridlabd.runInFilesystem(tree, attachments=attachments,
                                                   keepFiles=True, workDir=modelDir)
-                fs.remove(pJoin(modelDir, "PID.txt"))
+                os.remove(pJoin(modelDir, "PID.txt"))
                 p = output['Zregulator.csv']['power_in.real'][0]
                 q = output['Zregulator.csv']['power_in.imag'][0]
                 s = math.sqrt(p**2 + q**2)
@@ -459,7 +460,7 @@ def runForeground(modelDir, inputDict, fs):
         fs.save(pJoin(modelDir, "allOutputData.json"), json.dumps(allOutput, indent=4))
         # For autotest, there won't be such file.
         try:
-            fs.remove(pJoin(modelDir, "PPID.txt"))
+            os.remove(pJoin(modelDir, "PPID.txt"))
         except:
             pass
         print "DONE RUNNING", modelDir

@@ -38,6 +38,7 @@ fs = filesystem.Filesystem().fs
 
 db = SQLAlchemy(app)
 set_db(db)
+populated = False
 
 # model and persistence shall be created after db instance is created
 from omf.model.user import User
@@ -56,7 +57,6 @@ elif the_config.PERSISTENCE_TYPE == 'DATABASE':
     persistence = DatabasePersistence()
 else:
     raise ValueError('Unknown persistence type')
-
 
 ###################################################
 # HELPER FUNCTIONS
@@ -425,7 +425,7 @@ def cancelModel():
     pData = request.form.to_dict()
     modelModule = getattr(models, pData["modelType"])
     modelModule.cancel(
-        os.path.join("data", "Model", pData["user"], pData["modelName"]), fs)
+        os.path.join("data", "Model", pData["user"], pData["modelName"]))
     return redirect("/model/" + pData["user"] + "/" + pData["modelName"])
 
 
@@ -556,8 +556,8 @@ def cymeImport():
     return redirect("/#feeders")
 
 def startImportProcess(feederName, convertFunc, convertArgs):
-    if not os.path.isdir("data/Conversion/" + current_user_name()):
-        os.makedirs("data/Conversion/" + current_user_name())
+    if not fs.exists("data/Conversion/" + current_user_name()):
+        fs.create_dir("data/Conversion/" + current_user_name())
     fs.save("data/Conversion/" + current_user_name() + "/" + feederName + ".json", "WORKING")
 
     importProc = Process(
@@ -627,6 +627,8 @@ def saveFeeder(owner, feederName):
 def root():
     ''' Render the home screen of the OMF. '''
     # Gather object names.
+    if not fs.populated:
+        fs.populateHdfs()
     user = persistence.getUser(current_user_name())
     publicModels = [{"owner": "public", "name": x}
                     for x in safeListdir("data/Model/public/")]
@@ -687,7 +689,7 @@ def delete(objectType, objectName, owner):
     ''' Delete models or feeders. '''
     user = persistence.getUser(current_user_name())
     if owner != user.username and user.role == Role.ADMIN.value:
-        return False
+        return redirect("/")
     if objectType == "Feeder":
         fs.remove("data/Feeder/" + owner + "/" + objectName + ".json")
         return redirect("/#feeders")
@@ -714,49 +716,6 @@ def uniqObjName(objtype, owner, name):
     return jsonify(exists=fs.exists(path))
 
 
-def populateHdfs():
-    template_files = []
-    model_files = []
-    try:
-        template_files = ["templates/" + x for x in fs.listdir("templates")]
-    except:
-        print "importing templates to hdfs"
-        if fs.import_files_to_hdfs("templates", "templates"):
-            template_files = ["templates/" + x for x in fs.listdir("templates")]
-            shutil.rmtree("templates")
-    try:
-        model_files = ["models/" + x for x in fs.listdir("models")]
-    except:
-        print "importing models to hdfs"
-        if fs.import_files_to_hdfs("models", "models"):
-            model_files = ["models/" + x for x in fs.listdir("models")]
-            shutil.rmtree("models")
-    try:
-        if not fs.exists("data"):
-            fs.recursive_import_to_hdfs("data")
-        #shutil.rmtree("data")
-    except Exception as e:
-        print "Could not import data.... Reason: " + str(e)
-
-    try:
-        if not fs.exists("static"):
-            fs.recursive_import_to_hdfs("static")
-    except Exception as e:
-        print "Could not import data.... Reason: " + str(e)
-
-    if not (os.path.exists(_omfDir + "/tmp")):
-        os.mkdir(_omfDir + "/tmp")
-    if not (os.path.exists(_omfDir + "/tmp/data")):
-        os.mkdir(_omfDir + "/tmp/data")
-    if not (os.path.exists(_omfDir + "/tmp/data/Feeder")):
-        os.mkdir(_omfDir + "/tmp/data/Feeder")
-    if not (os.path.exists(_omfDir + "/tmp/data/Climate")):
-        os.mkdir(_omfDir + "/tmp/data/Climate")
-    if not (os.path.exists(_omfDir + "/tmp/data/Feeder/public")):
-        os.mkdir(_omfDir + "/tmp/data/Feeder/public")
-
-    return template_files, model_files
-
 @app.route("/id")
 def id():
     return redirect(url_for('static', filename='id/index.html'))
@@ -764,5 +723,5 @@ def id():
 
 if __name__ == "__main__":
     URL = "http://localhost:5000"
-    template_files, model_files = populateHdfs()
+    template_files, model_files = fs.populateHdfs()
     app.run(debug=True, extra_files=template_files + model_files)

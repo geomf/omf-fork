@@ -21,6 +21,7 @@ from os.path import join as pJoin
 class Localfs(object):
 
     HOME_DIR = ""
+    populated = False
 
     def __init__(self):
         pass
@@ -71,8 +72,21 @@ class Localfs(object):
     def export_local_to_hdfs(self, directory, file_to_export):
         return False
 
+    def export_from_fs_to_local(self, source, target):
+        directory = os.path.split(target)[0]
+        if not os.path.isdir(directory):
+            os.makedirs(directory)
+        shutil.copytree(pJoin(_omfDir, source), pJoin(_omfDir, target))
+
     def import_files_to_hdfs(self, local_directory, hdfs_directory):
         return False
 
     def recursive_import_to_hdfs(self, start_dir):
         pass
+
+    def populateHdfs(self):
+        template_files = ["templates/" + x for x in self.listdir("templates")]
+        model_files = ["models/" + x for x in self.listdir("models")]
+
+        self.populated = True
+        return template_files, model_files

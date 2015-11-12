@@ -6,6 +6,7 @@ import os
 import tempfile
 import webbrowser
 import math
+import shutil
 from os.path import join as pJoin
 from os.path import split as pSplit
 import logging
@@ -65,18 +66,22 @@ def renderAndShow(template, fs, modelDir="", datastoreNames={}):
 
 def getStatus(modelDir, fs):
     ''' Is the model stopped, running or finished? '''
-    if not fs.exists(modelDir):
+    if not os.path.isdir(modelDir):
         return "preRun"
     try:
         modFiles = fs.listdir(modelDir)
     except:
         modFiles = []
     hasInput = "allInputData.json" in modFiles
-    hasPID = "PPID.txt" in modFiles
     hasOutput = "allOutputData.json" in modFiles
+    try:
+        localFiles = os.listdir(pJoin(_omfDir, modelDir))
+    except:
+        localFiles = []
+    hasPID = "PPID.txt" in localFiles
     if hasInput and not hasOutput and not hasPID:
         return "stopped"
-    elif hasInput and not hasOutput and hasPID:
+    elif hasInput and hasPID:
         return "running"
     elif hasInput and hasOutput and not hasPID:
         return "finished"
@@ -85,12 +90,14 @@ def getStatus(modelDir, fs):
         return "stopped"
 
 
-def cancel(modelDir, fs):
+
+
+def cancel(modelDir):
     ''' Try to cancel a currently running model. '''
     # Kill GLD process if already been created
     logger.info('Canceling running model... modelDir: %s', modelDir)
     try:
-        with fs.open(pJoin(modelDir, "PID.txt")) as pidFile:
+        with open(pJoin(modelDir, "PID.txt"), "r") as pidFile:
             pid = int(pidFile.read())
             # print "pid " + str(pid)
             os.kill(pid, 15)
@@ -99,7 +106,7 @@ def cancel(modelDir, fs):
         pass
     # Kill runForeground process
     try:
-        with fs.open(pJoin(modelDir, "PPID.txt")) as pPidFile:
+        with open(pJoin(modelDir, "PPID.txt"), "r") as pPidFile:
             pPid = int(pPidFile.read())
             os.kill(pPid, 15)
             logger.info("PPID KILLED")
@@ -107,9 +114,9 @@ def cancel(modelDir, fs):
         pass
     # Remove PID, PPID, and allOutputData file if existed
     try:
-        for fName in fs.listdir(modelDir):
+        for fName in os.listdir(modelDir):
             if fName in ["PID.txt", "PPID.txt", "allOutputData.json"]:
-                fs.remove(pJoin(modelDir, fName))
+                os.remove(pJoin(modelDir, fName))
         logger.info("CANCELED %s", modelDir)
     except:
         pass
