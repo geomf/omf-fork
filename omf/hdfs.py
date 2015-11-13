@@ -83,6 +83,9 @@ class Hdfs(object):
 
     def copy_within_fs(self, source, target):
         print "HDFS: Copy within fs: copying to local... from " + _omfDir + "/tmp/" + source + " to: " + Hdfs.HOME_DIR + target
+
+        if not os.path.exists(pJoin(_omfDir, "tmp", source)):
+            os.makedirs(pJoin(_omfDir, "tmp", source))
         self.hdfs.copy_to_local(Hdfs.HOME_DIR + source, pJoin(_omfDir, "tmp", source))
         try:
             print "HDFS: Copy within fs: copying from local... from: " + Hdfs.HOME_DIR + target + " to: " + _omfDir + "/tmp/" + source
@@ -117,8 +120,6 @@ class Hdfs(object):
             self.export_local_to_hdfs(hdfs_directory, pJoin(local_directory, f))
         return True
 
-
-
     def recursive_import_to_hdfs(self, start_dir):
         self.create_dir(start_dir)
         for f in os.listdir(pJoin(_omfDir, start_dir)):
@@ -129,7 +130,7 @@ class Hdfs(object):
                 self.export_local_to_hdfs(start_dir, pJoin(_omfDir, start_dir, f))
         return True
 
-    def populateHdfs(self):
+    def populate_hdfs(self):
         template_files = []
         model_files = []
         try:
@@ -158,16 +159,14 @@ class Hdfs(object):
         except Exception as e:
             print "Could not import data.... Reason: " + str(e)
 
-        if not (os.path.exists(_omfDir + "/tmp")):
-            os.mkdir(_omfDir + "/tmp")
-        if not (os.path.exists(_omfDir + "/tmp/data")):
-            os.mkdir(_omfDir + "/tmp/data")
-        if not (os.path.exists(_omfDir + "/tmp/data/Feeder")):
-            os.mkdir(_omfDir + "/tmp/data/Feeder")
-        if not (os.path.exists(_omfDir + "/tmp/data/Climate")):
-            os.mkdir(_omfDir + "/tmp/data/Climate")
-        if not (os.path.exists(_omfDir + "/tmp/data/Feeder/public")):
-            os.mkdir(_omfDir + "/tmp/data/Feeder/public")
-
         self.populated = True
         return template_files, model_files
+
+    def populate_local(self):
+        if not os.path.exists("data"):
+            try:
+                self.export_from_fs_to_local("data", "data")
+            except Exception as e:
+                print "Could not import data.... Reason: " + str(e)
+        else:
+            print "Data directory already exists."

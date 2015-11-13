@@ -84,9 +84,12 @@ class Localfs(object):
     def recursive_import_to_hdfs(self, start_dir):
         pass
 
-    def populateHdfs(self):
+    def populate_hdfs(self):
         template_files = ["templates/" + x for x in self.listdir("templates")]
         model_files = ["models/" + x for x in self.listdir("models")]
 
         self.populated = True
         return template_files, model_files
+
+    def populate_local(self):
+        pass

@@ -309,11 +309,6 @@ def runForeground(modelDir, inputDict, fs):
 
         for root, dirs, files in os.walk(modelDir):
             # dump error info into dict
-
-            print root
-            print dirs
-            print files
-
             if "stderr.txt" in files:
                 with open(pJoin(root, "stderr.txt"), "r") as stderrFile:
                     tempString = stderrFile.read()

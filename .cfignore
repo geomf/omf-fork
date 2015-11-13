@@ -11,3 +11,4 @@ omf/scratch/
 setup.py
 cloudDeploy.sh
 dp2_scripts/
+omf/data/

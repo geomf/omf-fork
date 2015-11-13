@@ -35,6 +35,7 @@ sslify = SSLify(app)
 app.config.from_object(the_config)
 
 fs = filesystem.Filesystem().fs
+fs.populate_local()
 
 db = SQLAlchemy(app)
 set_db(db)
@@ -628,7 +629,7 @@ def root():
     ''' Render the home screen of the OMF. '''
     # Gather object names.
     if not fs.populated:
-        fs.populateHdfs()
+        fs.populate_hdfs()
     user = persistence.getUser(current_user_name())
     publicModels = [{"owner": "public", "name": x}
                     for x in safeListdir("data/Model/public/")]
@@ -723,5 +724,5 @@ def id():
 
 if __name__ == "__main__":
     URL = "http://localhost:5000"
-    template_files, model_files = fs.populateHdfs()
+    template_files, model_files = fs.populate_hdfs()
     app.run(debug=True, extra_files=template_files + model_files)
