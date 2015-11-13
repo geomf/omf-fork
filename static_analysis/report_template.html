@@ -1,0 +1,81 @@
+<!--
+Open Modeling Framework (OMF) Software for simulating power systems behavior
+Copyright (c) 2015, Intel Corporation.
+
+This program is free software; you can redistribute it and/or modify it
+under the terms and conditions of the GNU General Public License,
+version 2, as published by the Free Software Foundation.
+
+This program is distributed in the hope it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+more details.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"
+          integrity="sha512-dTfge/zgoMYpP7QbHy4gWMEGsbsdZeCXz7irItjcC3sPUFtf0kuFbDz/ixG7ArTxmDjLXDmezHubeNikyKGVyQ=="
+          crossorigin="anonymous">
+    <div id="head">
+        {% block head %}
+            <link rel="import" href="./report.html">
+            <title></title>
+            <script>
+                document.addEventListener("DOMContentLoaded", function (event) {
+
+                    var link = document.querySelector('link[rel="import"]');
+                    var content = link.import;
+
+                    var el = content.querySelector('#content').getElementsByTagName('tbody')[0];
+                    document.querySelector("#resultTable").appendChild(el.cloneNode(true));
+                    document.querySelector("#body").innerHTML = "";
+                    document.querySelector("#head").innerHTML = "";
+                });
+
+            </script>
+        {% endblock %}
+    </div>
+    <style>
+        .fatal {
+            background-color: red;
+        }
+        .error {
+            background-color: orange;
+        }
+        .warning {
+            background-color: yellow;
+        }
+        .info {
+            background-color: lightskyblue;
+        }
+        .convention {
+            display: none;
+        }
+        .refactor {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="col-xs-10 col-xs-offset-1">
+    <table id="resultTable" class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>File name</th>
+            <th>Row</th>
+            <th>Col</th>
+            <th>Message</th>
+        </tr>
+    </thead>
+        <div id="body">
+            {% block content %}
+
+            {% endblock %}
+        </div>
+    </table>
+</div>
+</body>
+</html>
