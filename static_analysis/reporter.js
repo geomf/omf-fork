@@ -15,9 +15,9 @@
 
 module.exports = {
     reporter: function (res) {
-        var len = res.length;
-        var str = '<table id="content">';
-
+        var fs = require('fs');
+        var text = fs.readFileSync( __dirname + '/report_template.html');
+        var str = '';
         var fatalCodes = ['E0602', 'E1120', 'W0631'];
         var errorCodes = ['W0109', 'W0212', 'W0702', 'W0403', 'W0703', 'W0311'];
         var warningCodes = ['E1305'];
@@ -65,7 +65,10 @@ module.exports = {
 
 
         if (str) {
-            process.stdout.write(str + "</table>");
+            var html = text.toString();
+            var position = html.indexOf('<div id="body">');
+            var output = [html.slice(0, position), str, html.slice(position)].join('');
+            process.stdout.write(output);
         }
     }
 };

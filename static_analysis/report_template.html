@@ -20,16 +20,9 @@ more details.
           crossorigin="anonymous">
     <div id="head">
         {% block head %}
-            <link rel="import" href="./report.html">
             <title></title>
             <script>
                 document.addEventListener("DOMContentLoaded", function (event) {
-
-                    var link = document.querySelector('link[rel="import"]');
-                    var content = link.import;
-
-                    var el = content.querySelector('#content').getElementsByTagName('tbody')[0];
-                    document.querySelector("#resultTable").appendChild(el.cloneNode(true));
                     document.querySelector("#body").innerHTML = "";
                     document.querySelector("#head").innerHTML = "";
                 });
