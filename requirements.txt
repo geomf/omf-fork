@@ -49,3 +49,4 @@ Flask-Script
 Flask-Migrate
 psycopg2
 enum34
+GeoAlchemy2

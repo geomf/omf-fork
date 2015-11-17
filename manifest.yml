@@ -13,7 +13,7 @@
 #
 ---
 applications:
-- name: omf-hdfs-generic
+- name: omf
   memory: 2GB
   disk_quota: 4GB
   instances: 1
@@ -34,4 +34,3 @@ services:
 # to create this service use: cf cs postgresql93 free omf_postgres_user_database
 - omf_postgres_user_database
 - hdfs-instance
-
