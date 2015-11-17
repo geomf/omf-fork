@@ -77,11 +77,11 @@ class Converter(object):
             class_Name = Converter.read_type[element["object"]]
             element = class_Name.update_geo_data(element, int(key), nodesList)
             if class_Name.validate(element):
-                ele = class_Name(element, feeder_id, key)
+                ele = class_Name(element, feeder_id)
                 if isinstance(ele, BaseNode) or isinstance(ele, SuperConfiguration):
                     firstElementList[ele.name] = ele
                     if isinstance(ele, ChildNode):
-                        thirdElementList[ele.name] = EdgeElements.ChildLine(element, feeder_id, key)
+                        thirdElementList[ele.name] = EdgeElements.ChildLine(element, feeder_id)
                 elif isinstance(ele, Configuration):
                     secondElementList[ele.name] = ele
                 elif isinstance(ele, Edge):
