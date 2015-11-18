@@ -13,6 +13,7 @@
 
 import json
 import logging
+from os.path import basename
 from sqlalchemy.orm import sessionmaker
 
 from BaseElements.BaseNode import BaseNode
@@ -20,6 +21,7 @@ from BaseElements.ChildNode import ChildNode
 from BaseElements.Edge import Edge
 from BaseElements.SuperConfiguration import SuperConfiguration
 from BaseElements.Configuration import Configuration
+from BaseElements.Feeder import Feeder
 from Elements import *
 
 class Converter(object):
@@ -53,11 +55,14 @@ class Converter(object):
                      "triplex_load": ChildNodeElements.TriplexLoad
                 }
 
+    feeder_config_types = ["climate", "player", "recorder"]
+
     @staticmethod
     def convert(feeder_id, feeder_name, engine):
         with open(feeder_name) as data_file:
             data = json.load(data_file)
 
+        configList = []
         nodesList = {}
         firstElementList = {}
         secondElementList = {}
@@ -68,12 +73,15 @@ class Converter(object):
 
         for key, element in data["tree"].iteritems():
             if "object" not in element:
-                logging.warning("Warning: object without a type - {}".format(element))
+                logging.warning("Object without a type - {}, saving to feeder config".format(element))
+                configList.append(str(Converter.byteify(element)))
+                continue
+            if element["object"] in Converter.feeder_config_types:
+                configList.append(str(Converter.byteify(element)))
                 continue
             if element["object"] not in Converter.read_type:
                 logging.warning("not yet supported object type - {}".format(element["object"]))
                 continue
-                # validate, and add
             class_Name = Converter.read_type[element["object"]]
             element = class_Name.update_geo_data(element, int(key), nodesList)
             if class_Name.validate(element):
@@ -105,6 +113,7 @@ class Converter(object):
             ele.perform_post_update(Converter.merge_two_dicts(firstElementList, secondElementList))
             session.add(ele)
 
+        session.add(Feeder(basename(feeder_name), configList))
         session.commit()
 
     @staticmethod
@@ -113,3 +122,14 @@ class Converter(object):
         z = x.copy()
         z.update(y)
         return z
+
+    @staticmethod
+    def byteify(input):
+        if isinstance(input, dict):
+            return {Converter.byteify(key):Converter.byteify(value) for key,value in input.iteritems()}
+        elif isinstance(input, list):
+            return [Converter.byteify(element) for element in input]
+        elif isinstance(input, unicode):
+            return input.encode('utf-8')
+        else:
+            return input

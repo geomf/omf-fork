@@ -10,5 +10,18 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 #
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.dialects import postgres
 
-__all__ = ['Element', 'BaseNode', 'Edge', 'Configuration', 'Feeder']
+from ..BaseElements.DB import Base
+
+class Feeder(Base):
+    __tablename__ = 'feeder'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    config = Column(postgres.ARRAY(String))
+
+    def __init__(self, name, configList):
+        self.name = name
+        self.config = configList
