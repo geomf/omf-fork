@@ -13,6 +13,7 @@
 
 import logging
 from sqlalchemy import Column, Integer
+from geoalchemy2 import Geometry
 
 from Element import Element
 from DB import Base
@@ -23,6 +24,7 @@ class BaseNode(Element, Base):
 
     lat = Column(Integer)
     lon = Column(Integer)
+    geo_point = Column(Geometry('POINT'))
 
     def __init__(self, element, feeder_id):
         super(BaseNode, self).__init__(element, feeder_id)
@@ -35,7 +37,9 @@ class BaseNode(Element, Base):
         self.lon += -10281993
         self.lat += 4715996  # 4695996
 
-        self.geo_point = "{} {}".format(self.lon, self.lat)
+        self.point = "{} {}".format(self.lon, self.lat)
+        self.geo_point = 'SRID=900913;POINT( {} )'.format(self.point)
+
         # change lat lon to google mercator. 			//39.0085476,-92.3647192
         # in mercator, position is stored in cm
         self.lat *= 100

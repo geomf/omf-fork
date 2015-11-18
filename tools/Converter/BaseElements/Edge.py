@@ -43,7 +43,7 @@ class Edge(Element, Base):
         return Element.validate(element)
 
     def _getWay(self, _from, _to):
-        return 'SRID=900913;LINESTRING( {}, {} )'.format(_from.geo_point, _to.geo_point)
+        return 'SRID=900913;LINESTRING( {}, {} )'.format(_from.point, _to.point)
 
     def perform_post_update(self, firstElementList):
         _from = firstElementList[self.from_name]
