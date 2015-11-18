@@ -6,7 +6,6 @@ import os
 import tempfile
 import webbrowser
 import math
-import shutil
 from os.path import join as pJoin
 from os.path import split as pSplit
 import logging

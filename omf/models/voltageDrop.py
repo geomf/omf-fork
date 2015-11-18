@@ -5,10 +5,7 @@ import json
 import os
 import sys
 import tempfile
-import webbrowser
-import time
 import shutil
-import subprocess
 import datetime as dt
 import csv
 import math
@@ -17,17 +14,16 @@ from jinja2 import Template
 from matplotlib import pyplot as plt
 import networkx as nx
 import __metaModel__
-from __metaModel__ import *
+from __metaModel__ import renderAndShow, getStatus as getStatusMeta
 import logging
 
-logger = logging.getLogger(__name__)
-
 # OMF imports
-sys.path.append(__metaModel__._omfDir)
 import omf.feeder
 from omf.solvers import gridlabd
 from omf.common.plot import Plot
 
+logger = logging.getLogger(__name__)
+sys.path.append(__metaModel__._omfDir)
 template = None
 
 def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
@@ -35,6 +31,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
     with fs.open("models/voltageDrop.html") as tempFile:
         template = Template(tempFile.read())
     return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):

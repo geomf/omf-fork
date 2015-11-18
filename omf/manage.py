@@ -17,14 +17,13 @@ import os.path
 my_dir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(my_dir)
 
-from flask.ext.script import Manager
+from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
 
 from web import app, db
 from common.userRole import Role
 
 import logging
-import web
 
 logging.basicConfig(format='%(asctime)s - %(process)d:%(threadName)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.DEBUG)

@@ -314,7 +314,7 @@ class Entry:
         if (self._entry is not None):
             return SSCAPI.ssc_entry_description(self._entry)
         else:
-            return null
+            return None
 
     def version(self):
         if (self._entry is not None):

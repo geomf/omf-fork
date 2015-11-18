@@ -3,9 +3,6 @@
 import os
 import sys
 import subprocess
-import imp
-from os.path import join as pJoin
-from os.path import split as pSplit
 
 IGNORE_DIRS = ["data", ".git", "static", "templates", "uploads", "scratch"]
 IGNORE_FILES = ["runAllTests.py"]  # to avoid infinite loop.

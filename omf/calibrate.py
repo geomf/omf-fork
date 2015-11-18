@@ -60,7 +60,6 @@ def omfCalibrate(workDir, feederPath, scadaPath):
             swingName = tree[key].get('name')
     for key in tree:
         if tree[key].get('object', '') in ['regulator', 'overhead_line', 'underground_line', 'transformer', 'fuse'] and tree[key].get('from', '') == swingName:
-            regIndex = key
             SUB_REG_NAME = tree[key]['name']
     recOb = {"object": "recorder",
              "parent": SUB_REG_NAME,

@@ -1425,25 +1425,13 @@ def convert(stdString, seqString):
 
     return glmTree, x_scale, y_scale
 
-
-def _latCount(name):
-    ''' Debug function to count up the meters and such and figure out whether we're lat/lon coding them correctly. '''
-    nameCount, myLatCount = (0, 0)
-    for key in outGlm:
-        if outGlm[key].get('object', '') == name:
-            nameCount += 1
-            if 'latitude' in outGlm[key]:
-                myLatCount += 1
-    print name, 'COUNT', nameCount, 'LAT COUNT', latCount, 'SUCCESS RATE', 1.0 * latCount / nameCount
-
-
 def _tests(keepFiles=False):
     ''' Test convert every windmil feeder we have (in uploads). Return number of exceptions we hit. '''
     import os
     import json
     import traceback
     import shutil
-    from solvers import gridlabd
+    from omf.solvers import gridlabd
     from matplotlib import pyplot as plt
     openPrefix = './uploads/'
     outPrefix = './scratch/milToGridlabTests/'

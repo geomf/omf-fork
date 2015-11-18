@@ -4,27 +4,21 @@
 import json
 import os
 import sys
-import tempfile
-import webbrowser
-import time
 import shutil
-import subprocess
 import datetime
 from os.path import join as pJoin
 from jinja2 import Template
 import __metaModel__
-from __metaModel__ import *
+from __metaModel__ import renderAndShow, getStatus as getStatusMeta
 import logging
-import warnings
 
-logger = logging.getLogger(__name__)
 
 # OMF imports
-sys.path.append(__metaModel__._omfDir)
-import feeder
-from solvers import nrelsam2013
-from weather import zipCodeToClimateName
+from omf.solvers import nrelsam2013
+from omf.weather import zipCodeToClimateName
 
+logger = logging.getLogger(__name__)
+sys.path.append(__metaModel__._omfDir)
 template = None
 
 
@@ -38,6 +32,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
 def quickRender(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
     ''' Presence of this function indicates we can run the model quickly via a public interface. '''
     return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames, quickRender=True)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):

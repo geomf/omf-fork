@@ -19,8 +19,8 @@ import milToGridlab
 import cymeToGridlab
 import logging
 import filesystem
-from flask.ext.session import Session
-from flask.ext.sqlalchemy import SQLAlchemy
+from flask_session import Session
+from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail
 from omf.config import the_config
 from omf.common.email import Email
@@ -108,7 +108,7 @@ def csrf_protect():
 def cryptoRandomString():
     ''' Generate a cryptographically secure random string for signing/encrypting cookies. '''
     if 'COOKIE_KEY' in globals():
-        return COOKIE_KEY
+        return globals()["COOKIE_KEY"]
     else:
         return hashlib.md5(str(random.random()) + str(time.time())).hexdigest()
 
@@ -190,7 +190,7 @@ def login():
 def login_page():
     nextUrl = str(request.args.get("next", "/"))
     if flask_login.current_user.is_authenticated():
-        return redirect(urlTarget)
+        return redirect(nextUrl)
     # Generate list of models with quickRun
     modelNames = []
     for modelName in models.__all__:
@@ -661,7 +661,8 @@ def root():
             # mod["created"] = allInput.get("created","")
             mod["editDate"] = time.strftime(
                 "%Y-%m-%d %H:%M:%S", time.gmtime(fs.get_file_modification_time(modPath)))
-        except:
+        except Exception as e:
+            logger.exception("Exception while setting model status: " + str(e))
             continue
     for feed in allFeeders:
         try:

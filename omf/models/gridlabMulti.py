@@ -2,28 +2,33 @@
 ''' Powerflow results for one Gridlab instance. '''
 
 import sys
-import time
 import shutil
-import feeder
+import os
 import datetime
 import multiprocessing
 import pprint
+import json
+import math
 import traceback
 import __metaModel__
 import logging
-
+from os.path import join as pJoin
+from os.path import split as pSplit
 from pyhdfs import HdfsFileNotFoundException
 from jinja2 import Template
-from __metaModel__ import *
+from __metaModel__ import renderAndShow, cancel, roundSig, getStatus
 
-# OMF imports
-sys.path.append(__metaModel__._omfDir)
-from solvers import gridlabd
-from weather import zipCodeToClimateName
+import omf
+from omf.solvers import gridlabd
+from omf.weather import zipCodeToClimateName
 from flask import session
 
 logger = logging.getLogger(__name__)
+sys.path.append(__metaModel__._omfDir)
 pp = pprint.PrettyPrinter(indent=4)
+
+from omf import feeder
+
 
 template = None
 
@@ -44,11 +49,15 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
         inJson["modelName"] = modelName
         inJson["user"] = user
         allInputData = json.dumps(inJson)
+    except HdfsFileNotFoundException:
+        allInputData = None
     except IOError:
         allInputData = None
     try:
         allOutputData = fs.open(pJoin(modelDir, "allOutputData.json")).read()
     except HdfsFileNotFoundException:
+        allOutputData = None
+    except IOError:
         allOutputData = None
     if absolutePaths:
         # Parent of current folder.
@@ -64,6 +73,8 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
                 feederIDs.append(key)
                 feederList.append(inputDict[key])
     except HdfsFileNotFoundException:
+        pass
+    except IOError:
         pass
     with open('templates/footer.html', 'r') as footer_file:
         footer = footer_file.read()
@@ -174,26 +185,26 @@ def runForeground(modelDir, inputDict, fs):
                     if key.startswith('Climate_') and key.endswith('.csv'):
                         cleanOut['climate'] = {}
                         cleanOut['climate'][
-                            'Rain Fall (in/h)'] = hdmAgg(rawOut[key].get('rainfall'), sum, level)
+                            'Rain Fall (in/h)'] = hdmAgg(rawOut[key].get('rainfall'), sum, level, stamps)
                         cleanOut['climate'][
-                            'Wind Speed (m/s)'] = hdmAgg(rawOut[key].get('wind_speed'), avg, level)
+                            'Wind Speed (m/s)'] = hdmAgg(rawOut[key].get('wind_speed'), avg, level, stamps)
                         cleanOut['climate']['Temperature (F)'] = hdmAgg(
-                            rawOut[key].get('temperature'), max, level)
+                            rawOut[key].get('temperature'), max, level, stamps)
                         cleanOut['climate']['Snow Depth (in)'] = hdmAgg(
-                            rawOut[key].get('snowdepth'), max, level)
+                            rawOut[key].get('snowdepth'), max, level, stamps)
                         cleanOut['climate'][
-                            'Direct Insolation (W/m^2)'] = hdmAgg(rawOut[key].get('solar_direct'), sum, level)
+                            'Direct Insolation (W/m^2)'] = hdmAgg(rawOut[key].get('solar_direct'), sum, level, stamps)
                 # Voltage Band
                 if 'VoltageJiggle.csv' in rawOut:
                     cleanOut['allMeterVoltages'] = {}
                     cleanOut['allMeterVoltages']['Min'] = hdmAgg(
-                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['min(voltage_12.mag)']], min, level)
+                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['min(voltage_12.mag)']], min, level, stamps)
                     cleanOut['allMeterVoltages']['Mean'] = hdmAgg(
-                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['mean(voltage_12.mag)']], avg, level)
+                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['mean(voltage_12.mag)']], avg, level, stamps)
                     cleanOut['allMeterVoltages']['StdDev'] = hdmAgg(
-                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['std(voltage_12.mag)']], avg, level)
+                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['std(voltage_12.mag)']], avg, level, stamps)
                     cleanOut['allMeterVoltages']['Max'] = hdmAgg(
-                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['max(voltage_12.mag)']], max, level)
+                        [float(i / 2) for i in rawOut['VoltageJiggle.csv']['max(voltage_12.mag)']], max, level, stamps)
                 # Power Consumption
                 cleanOut['Consumption'] = {}
                 # Set default value to be 0, avoiding missing value when
@@ -207,7 +218,7 @@ def runForeground(modelDir, inputDict, fs):
                 for key in rawOut:
                     if key.startswith('SwingKids_') and key.endswith('.csv'):
                         oneSwingPower = hdmAgg(vecPyth(
-                            rawOut[key]['sum(power_in.real)'], rawOut[key]['sum(power_in.imag)']), avg, level)
+                            rawOut[key]['sum(power_in.real)'], rawOut[key]['sum(power_in.imag)']), avg, level, stamps)
                         if 'Power' not in cleanOut['Consumption']:
                             cleanOut['Consumption']['Power'] = oneSwingPower
                         else:
@@ -221,7 +232,7 @@ def runForeground(modelDir, inputDict, fs):
                         imagB = rawOut[key]['power_B.imag']
                         imagC = rawOut[key]['power_C.imag']
                         oneDgPower = hdmAgg(vecSum(vecPyth(realA, imagA), vecPyth(
-                            realB, imagB), vecPyth(realC, imagC)), avg, level)
+                            realB, imagB), vecPyth(realC, imagC)), avg, level, stamps)
                         if 'DG' not in cleanOut['Consumption']:
                             cleanOut['Consumption']['DG'] = oneDgPower
                         else:
@@ -246,7 +257,7 @@ def runForeground(modelDir, inputDict, fs):
                         # HACK: multiply by negative one because turbine power
                         # sign is opposite all other DG:
                         oneDgPower = [-1.0 *
-                                      x for x in hdmAgg(vecSum(powerA, powerB, powerC), avg, level)]
+                                      x for x in hdmAgg(vecSum(powerA, powerB, powerC), avg, level, stamps)]
                         if 'DG' not in cleanOut['Consumption']:
                             cleanOut['Consumption']['DG'] = oneDgPower
                         else:
@@ -260,7 +271,7 @@ def runForeground(modelDir, inputDict, fs):
                         realC = rawOut[key]['sum(power_losses_C.real)']
                         imagC = rawOut[key]['sum(power_losses_C.imag)']
                         oneLoss = hdmAgg(vecSum(vecPyth(realA, imagA), vecPyth(
-                            realB, imagB), vecPyth(realC, imagC)), avg, level)
+                            realB, imagB), vecPyth(realC, imagC)), avg, level, stamps)
                         if 'Losses' not in cleanOut['Consumption']:
                             cleanOut['Consumption']['Losses'] = oneLoss
                         else:
@@ -375,7 +386,7 @@ def runForeground(modelDir, inputDict, fs):
             modelPath, modelName = pSplit(modelDir)
             message = "The model " + "<i>" + str(modelName) + "</i>" + " has failed to complete running. It ran for a total of " + str(
                 inputDict["runTime"]) + " seconds from " + str(beginTime) + ", to " + str(finishTime) + "."
-            return web.send_link(email, message, user)
+            return omf.web.send_link(email, message, user)
         except Exception, e:
             logger.exception(
                 'ERROR: failed to send model completed running email to user %s. Exception', email)
@@ -388,7 +399,7 @@ def avg(inList):
     return sum(inList) / len(inList)
 
 
-def hdmAgg(series, func, level):
+def hdmAgg(series, func, level, stamps):
     ''' Simple hour/day/month aggregation for Gridlab. '''
     if level in ['days', 'months']:
         return aggSeries(stamps, series, func, level)

@@ -27,7 +27,6 @@ the following in a .glm:
 
 import os
 import urllib
-import json
 import csv
 import math
 import re

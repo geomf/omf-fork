@@ -4,29 +4,21 @@
 import json
 import os
 import sys
-import tempfile
-import webbrowser
-import time
 import shutil
-import subprocess
 import math
 import datetime as dt
+import __metaModel__
+import logging
+import traceback
 from numpy import npv, pmt, ppmt, ipmt, irr
 from jinja2 import Template
-import __metaModel__
-from __metaModel__ import *
-from random import random
-import traceback
-import csv
-# OMF imports
+from os.path import join as pJoin
+from __metaModel__ import renderAndShow, getStatus as getStatusMeta
+from omf.solvers import nrelsam2013
+from omf.weather import zipCodeToClimateName
+
 sys.path.append(__metaModel__._omfDir)
-import feeder
-from solvers import nrelsam2013
-from weather import zipCodeToClimateName
-import logging
-
 logger = logging.getLogger(__name__)
-
 template = None
 
 def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
@@ -41,6 +33,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
 def quickRender(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
     ''' Presence of this function indicates we can run the model quickly via a public interface. '''
     return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames, quickRender=True)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):
@@ -641,7 +637,9 @@ def run(modelDir, inputDict, fs):
                 nValue = achievedReturnTE
                 z = z + math.pow(10, p)
                 PPARateSixYearsTE = z / 100.0
-        z = z - math.pow(10, p)
+            #TODO Added one more indentation to avoid using variable out of scope.
+            z = z - math.pow(10, p)
+
         PPARateSixYearsTE = z / 100
 
         # Master Output [Tax Equity]

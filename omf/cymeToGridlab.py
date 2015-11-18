@@ -22,13 +22,11 @@ conductors is the full path to a .csv file containing conductor information for 
 Note that db_network and db_equipment can be the same file is both network and equipment databases were exported to one .mdb file from CYME.
 '''
 import pyodbc
-import feeder
 import csv
 import random
 import math
 import copy
 import warnings
-from StringIO import StringIO
 import sys
 import os
 import json
@@ -39,6 +37,7 @@ from matplotlib import pyplot as plt
 from pathlib import Path
 import logging
 from omf.common.plot import Plot
+from omf import feeder
 
 logger = logging.getLogger(__name__)
 
@@ -1754,7 +1753,7 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
     for ohl in cymsectiondevice.keys():
         if cymsectiondevice[ohl]['device_type'] == 3:
             if ohl not in cymoverheadbyphase.keys():
-                logger.warning("There is no line spec for %s in the network database provided.", oh1)
+                logger.warning("There is no line spec for %s in the network database provided.", ohl)
             elif ohl not in ohls.keys():
                 if ohl not in parallelLinks:
                     ohls[ohl] = {'object': 'overhead_line',
@@ -1850,7 +1849,7 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
         if cymsectiondevice[ugl]['device_type'] == 1:
             ph = cymsectiondevice[ugl]['phases'].replace('N', '')
             if ugl not in cymundergroundline.keys():
-                logger.warning("There is no line spec for %s in the network database provided.", ug1)
+                logger.warning("There is no line spec for %s in the network database provided.", ugl)
             else:
                 phs = 0
                 if 'A' in ph:
@@ -1935,7 +1934,7 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
     for rcl in cymsectiondevice.keys():
         if cymsectiondevice[rcl]['device_type'] == 10:
             if rcl not in cymrecloser.keys():
-                logger.warning("There is no recloster spec for %s in the network database provided.", rc1)
+                logger.warning("There is no recloster spec for %s in the network database provided.", rcl)
             elif rcl not in rcls.keys():
                 rcls[rcl] = {'object': 'recloser',
                              'name': rcl,
@@ -2120,7 +2119,7 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
     for xfmr in cymsectiondevice.keys():
         if cymsectiondevice[xfmr]['device_type'] == 47:
             if xfmr not in cymxfmr.keys():
-                logger.warning("There is no xmfr spec for %s in the network database provided.\n", xmfr)
+                logger.warning("There is no xmfr spec for %s in the network database provided.\n", xfmr)
             else:
                 xfmrEq = cymxfmr[xfmr]['equipment_name']
                 if xfmrEq == xfmr:
@@ -2136,7 +2135,7 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
                 if 'C' in ph:
                     phNum += 1.0
                 if xfmrEq not in cymeqautoxfmr.keys():
-                    logger.warning("There is no xmfr spec for %s in the network database provided.", xmfrEq)
+                    logger.warning("There is no xmfr spec for %s in the network database provided.", xfmrEq)
                 else:
                     if xfmrEq not in xfmr_cfgs.keys():
                         xfmr_cfgs[xfmrEq] = {'object': 'transformer_configuration',
@@ -2175,7 +2174,7 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
                 if 'C' in ph:
                     phNum += 1.0
                 if xfmrEq not in cymeq3wautoxfmr.keys():
-                    logger.warning("There is no xmfr spec for %s in the network database provided.", xmfrEq)
+                    logger.warning("There is no xmfr spec for %s in the network database provided.", xfmrEq)
                 else:
                     if xfmrEq not in xfmr_cfgs.keys():
                         xfmr_cfgs[xfmrEq] = {'object': 'transformer_configuration',
@@ -2378,13 +2377,6 @@ def convertCymeModel(network_db, equipment_db, test=False, type=1, feeder_id=Non
 
 
 def _tests(keepFiles=True):
-    import os
-    import json
-    import traceback
-    import shutil
-    from solvers import gridlabd
-    from matplotlib import pyplot as plt
-    import feeder
     exceptionCount = 0
     try:
         #db_network = os.path.abspath('./uploads/IEEE13.mdb')

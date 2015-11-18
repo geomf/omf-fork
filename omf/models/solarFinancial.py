@@ -4,30 +4,22 @@
 import json
 import os
 import sys
-import tempfile
-import webbrowser
-import time
 import shutil
-import subprocess
-import math
 import datetime as dt
 from os.path import join as pJoin
 from jinja2 import Template
 import __metaModel__
-from __metaModel__ import *
-from random import random
+from __metaModel__ import roundSig, renderAndShow, getStatus as getStatusMeta
 from numpy import irr, npv
 import xlwt
 import traceback
 # OMF imports
-sys.path.append(__metaModel__._omfDir)
-import feeder
-from solvers import nrelsam2013
-from weather import zipCodeToClimateName
+from omf.solvers import nrelsam2013
+from omf.weather import zipCodeToClimateName
 import logging
 
 logger = logging.getLogger(__name__)
-
+sys.path.append(__metaModel__._omfDir)
 template = None
 
 def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
@@ -36,6 +28,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
         template = Template(tempFile.read())
 
     return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):

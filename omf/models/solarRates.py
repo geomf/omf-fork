@@ -4,29 +4,20 @@
 import json
 import os
 import sys
-import tempfile
-import webbrowser
-import time
-import shutil
-import subprocess
-import math
 import datetime as dt
 from os.path import join as pJoin
 from jinja2 import Template
 import __metaModel__
-from __metaModel__ import *
-from operator import sub
+from __metaModel__ import renderAndShow, roundSig, getStatus as getStatusMeta
 import traceback
 # OMF imports
-sys.path.append(__metaModel__._omfDir)
-import feeder
-from solvers import nrelsam2013
-import random
-from weather import zipCodeToClimateName
+from omf.solvers import nrelsam2013
+from omf.weather import zipCodeToClimateName
 import logging
 
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
+sys.path.append(__metaModel__._omfDir)
 template = None
 
 def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreNames={}):
@@ -36,6 +27,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
         template = Template(tempFile.read())
 
     return __metaModel__.renderTemplate(template, fs, modelDir, absolutePaths, datastoreNames)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):
@@ -557,7 +552,7 @@ def _tests():
     # No-input template.
     renderAndShow(template, fs)
     # Run the model.
-    run(modelLoc, inData)
+    run(modelLoc, inData, fs)
     # Show the output.
     renderAndShow(template, fs, modelDir=modelLoc)
     # # Delete the model.

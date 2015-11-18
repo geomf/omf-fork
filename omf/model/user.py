@@ -15,7 +15,7 @@
 from passlib.hash import pbkdf2_sha512
 from omf.model.dbo import db
 from omf.common.userRole import Role
-from flask.ext.login import UserMixin
+from flask_login import UserMixin
 
 class User(db.Model, UserMixin):
     username = db.Column(db.String(80), primary_key=True)

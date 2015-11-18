@@ -6,11 +6,14 @@ import shutil
 import datetime
 import traceback
 import csv
+import os
+import json
 from dateutil.parser import parse
 from numpy import npv
+from os.path import join as pJoin
 from jinja2 import Template
 import __metaModel__
-from __metaModel__ import *
+from __metaModel__ import renderAndShow, getStatus as getStatusMeta
 import logging
 
 logger = logging.getLogger(__name__)
@@ -34,6 +37,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
 # 	''' Presence of this function indicates we can run the model quickly via a public interface. '''
 # return __metaModel__.renderTemplate(template, modelDir, absolutePaths,
 # datastoreNames, quickRender=True)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):

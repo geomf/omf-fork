@@ -2,23 +2,25 @@
 ''' Calculate CVR impacts using a targetted set of static loadflows. '''
 
 import sys
-import shutil
+import os
+import math
 import datetime
+import json
 import multiprocessing
 from copy import copy
 from jinja2 import Template
 from matplotlib import pyplot as plt
+from os.path import join as pJoin
 import __metaModel__
-from __metaModel__ import *
+from __metaModel__ import renderAndShow, getStatus as getStatusMeta
 import logging
 # OMF imports
-sys.path.append(__metaModel__._omfDir)
 import omf.feeder
 from omf.solvers import gridlabd
 from omf.common.plot import Plot
 
 logger = logging.getLogger(__name__)
-
+sys.path.append(__metaModel__._omfDir)
 template = None
 
 def renderTemplate(template, fs, modelDir="MyModel", absolutePaths=False, datastoreNames={}):
@@ -38,6 +40,10 @@ def _roundOne(x, direc):
         return math.floor(decForm) * thou
     else:
         raise Exception
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def run(modelDir, inputDict, fs):
@@ -472,6 +478,7 @@ def runForeground(modelDir, inputDict, fs):
 
 def _tests():
     # Variables
+    import shutil
     from .. import filesystem
     fs = filesystem.Filesystem().fs
     workDir = pJoin(__metaModel__._omfDir, "data", "Model")

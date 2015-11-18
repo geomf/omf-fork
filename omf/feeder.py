@@ -2,7 +2,6 @@
 
 import datetime
 import copy
-import os
 import re
 import warnings
 import networkx as nx
@@ -17,8 +16,10 @@ newFeederWireframe = {"links": [], "hiddenLinks": [], "nodes": [], "hiddenNodes"
                       "layoutVars": {"theta": "0.8", "gravity": "0.01", "friction": "0.9", "linkStrength": "5",
                                      "linkDistance": "5", "charge": "-5"}}
 
+
 def convert(inputStr):
     return parse(inputStr, False), 0, 0
+
 
 def parse(inputStr, filePath=True):
     ''' Parse a GLM into an omf.feeder tree. This is so we can walk the tree, change things in bulk, etc.
@@ -232,7 +233,7 @@ def latLonNxGraph(inGraph, labels=False, neatoLayout=False):
         # to read attrs.
         cleanG = nx.Graph(inGraph.edges())
         # HACK2: might miss nodes without edges without the following.
-        cleanG.add_nodes_from(fGraph)
+        cleanG.add_nodes_from(inGraph)
         pos = nx.graphviz_layout(cleanG, prog='neato')
     else:
         pos = {n: inGraph.node[n].get('pos', (0, 0)) for n in inGraph}
@@ -568,7 +569,7 @@ def _tests():
     with open('data/Feeder/public/Olin Barre Geo.json') as inFile:
         tree = json.load(inFile)['tree']
     nxG = treeToNxGraph(tree)
-    x = latLonNxGraph(nxG)
+    latLonNxGraph(nxG)
     # plt.show()
 
 if __name__ == '__main__':

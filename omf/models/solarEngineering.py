@@ -5,6 +5,9 @@ import sys
 import shutil
 import datetime
 import gc
+import os
+import math
+import json
 import networkx as nx
 import matplotlib
 import numpy as np
@@ -16,14 +19,14 @@ from os.path import split as pSplit
 from jinja2 import Template
 import traceback
 import __metaModel__
-from __metaModel__ import *
+from __metaModel__ import roundSig, getStatus, renderAndShow
 
 # OMF imports
 sys.path.append(__metaModel__._omfDir)
-import feeder
-from solvers import gridlabd
+from omf import feeder
+from omf.solvers import gridlabd
 from pyhdfs import HdfsFileNotFoundException
-from weather import zipCodeToClimateName
+from omf.weather import zipCodeToClimateName
 import logging
 
 logger = logging.getLogger(__name__)
@@ -180,18 +183,18 @@ def heavyProcessing(modelDir, inputDict, fs):
             if key.startswith('Climate_') and key.endswith('.csv'):
                 cleanOut['climate'] = {}
                 cleanOut['climate'][
-                    'Rain Fall (in/h)'] = hdmAgg(rawOut[key].get('rainfall'), sum, level)
+                    'Rain Fall (in/h)'] = hdmAgg(rawOut[key].get('rainfall'), sum, level, stamps)
                 cleanOut['climate'][
-                    'Wind Speed (m/s)'] = hdmAgg(rawOut[key].get('wind_speed'), avg, level)
+                    'Wind Speed (m/s)'] = hdmAgg(rawOut[key].get('wind_speed'), avg, level, stamps)
                 cleanOut['climate']['Temperature (F)'] = hdmAgg(
-                    rawOut[key].get('temperature'), max, level)
+                    rawOut[key].get('temperature'), max, level, stamps)
                 cleanOut['climate']['Snow Depth (in)'] = hdmAgg(
-                    rawOut[key].get('snowdepth'), max, level)
+                    rawOut[key].get('snowdepth'), max, level, stamps)
                 cleanOut['climate'][
-                    'Direct Normal (W/sf)'] = hdmAgg(rawOut[key].get('solar_direct'), sum, level)
+                    'Direct Normal (W/sf)'] = hdmAgg(rawOut[key].get('solar_direct'), sum, level, stamps)
                 #cleanOut['climate']['Global Horizontal (W/sf)'] = hdmAgg(rawOut[key].get('solar_global'), sum, level)
                 climateWbySFList = hdmAgg(
-                    rawOut[key].get('solar_global'), sum, level)
+                    rawOut[key].get('solar_global'), sum, level, stamps)
                 # converting W/sf to W/sm
                 climateWbySMList = [x * 10.76392 for x in climateWbySFList]
                 cleanOut['climate'][
@@ -200,13 +203,13 @@ def heavyProcessing(modelDir, inputDict, fs):
         if 'VoltageJiggle.csv' in rawOut:
             cleanOut['allMeterVoltages'] = {}
             cleanOut['allMeterVoltages']['Min'] = hdmAgg(
-                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['min(voltage_12.mag)']], min, level)
+                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['min(voltage_12.mag)']], min, level, stamps)
             cleanOut['allMeterVoltages']['Mean'] = hdmAgg(
-                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['mean(voltage_12.mag)']], avg, level)
+                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['mean(voltage_12.mag)']], avg, level, stamps)
             cleanOut['allMeterVoltages']['StdDev'] = hdmAgg(
-                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['std(voltage_12.mag)']], avg, level)
+                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['std(voltage_12.mag)']], avg, level, stamps)
             cleanOut['allMeterVoltages']['Max'] = hdmAgg(
-                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['max(voltage_12.mag)']], max, level)
+                [float(i / 2) for i in rawOut['VoltageJiggle.csv']['max(voltage_12.mag)']], max, level, stamps)
         # Power Consumption
         cleanOut['Consumption'] = {}
         # Set default value to be 0, avoiding missing value when computing
@@ -217,7 +220,7 @@ def heavyProcessing(modelDir, inputDict, fs):
         for key in rawOut:
             if key.startswith('SwingKids_') and key.endswith('.csv'):
                 oneSwingPower = hdmAgg(vecPyth(
-                    rawOut[key]['sum(power_in.real)'], rawOut[key]['sum(power_in.imag)']), avg, level)
+                    rawOut[key]['sum(power_in.real)'], rawOut[key]['sum(power_in.imag)']), avg, level, stamps)
                 if 'Power' not in cleanOut['Consumption']:
                     cleanOut['Consumption']['Power'] = oneSwingPower
                 else:
@@ -231,7 +234,7 @@ def heavyProcessing(modelDir, inputDict, fs):
                 imagB = rawOut[key]['power_B.imag']
                 imagC = rawOut[key]['power_C.imag']
                 oneDgPower = hdmAgg(vecSum(vecPyth(realA, imagA), vecPyth(
-                    realB, imagB), vecPyth(realC, imagC)), avg, level)
+                    realB, imagB), vecPyth(realC, imagC)), avg, level, stamps)
                 if 'DG' not in cleanOut['Consumption']:
                     cleanOut['Consumption']['DG'] = oneDgPower
                 else:
@@ -253,7 +256,7 @@ def heavyProcessing(modelDir, inputDict, fs):
                 powerA = vecProd(vecPyth(vrA, viA), vecPyth(crA, ciA))
                 powerB = vecProd(vecPyth(vrB, viB), vecPyth(crB, ciB))
                 powerC = vecProd(vecPyth(vrC, viC), vecPyth(crC, ciC))
-                oneDgPower = hdmAgg(vecSum(powerA, powerB, powerC), avg, level)
+                oneDgPower = hdmAgg(vecSum(powerA, powerB, powerC), avg, level, stamps)
                 if 'DG' not in cleanOut['Consumption']:
                     cleanOut['Consumption']['DG'] = oneDgPower
                 else:
@@ -267,7 +270,7 @@ def heavyProcessing(modelDir, inputDict, fs):
                 realC = rawOut[key]['sum(power_losses_C.real)']
                 imagC = rawOut[key]['sum(power_losses_C.imag)']
                 oneLoss = hdmAgg(vecSum(vecPyth(realA, imagA), vecPyth(
-                    realB, imagB), vecPyth(realC, imagC)), avg, level)
+                    realB, imagB), vecPyth(realC, imagC)), avg, level, stamps)
                 if 'Losses' not in cleanOut['Consumption']:
                     cleanOut['Consumption']['Losses'] = oneLoss
                 else:
@@ -448,7 +451,7 @@ def avg(inList):
     return sum(inList) / len(inList)
 
 
-def hdmAgg(series, func, level):
+def hdmAgg(series, func, level, stamps):
     ''' Simple hour/day/month aggregation for Gridlab. '''
     if level in ['days', 'months']:
         return aggSeries(stamps, series, func, level)

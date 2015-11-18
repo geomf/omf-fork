@@ -2,30 +2,21 @@
 ''' Calculate CVR impacts using a targetted set of dynamic loadflows. '''
 
 import json
-import os
 import sys
-import tempfile
-import webbrowser
-import time
-import shutil
-import datetime
-import subprocess
 import math
-import re
-import csv
 import calendar
+import os
 import multiprocessing
-from copy import deepcopy
 from os.path import join as pJoin
 from jinja2 import Template
 from matplotlib import pyplot as plt
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, timedelta
 import __metaModel__
-from __metaModel__ import *
+from __metaModel__ import cancel, getStatus as getStatusMeta
 
 # OMF imports
 sys.path.append(__metaModel__._omfDir)
-import feeder
+from omf import feeder
 import omf.calibrate
 from omf.solvers import gridlabd
 from omf.common.plot import Plot
@@ -37,6 +28,10 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
     with fs.open("models/_cvrDynamic.html") as tempFile:
         template = Template(tempFile.read())
     return __metaModel__.renderTemplate(template, modelDir, absolutePaths, datastoreNames)
+
+
+def getStatus(modelDir, fs):
+    return getStatusMeta(modelDir, fs)
 
 
 def returnMag(complexStr):
@@ -567,6 +562,9 @@ def runForeground(modelDir, inData, fs):
 
 def _tests():
     "runs local tests for dynamic CVR model"
+    import shutil
+    from .. import filesystem
+    fs = filesystem.Filesystem().fs
     # creating a work directory and initializing data
     inData = {"modelName": "Automated DynamicCVR Testing",
               "modelType": "_cvrDynamic",
@@ -591,7 +589,7 @@ def _tests():
         shutil.rmtree(modelDir)
     except:
         pass
-    run(modelDir, inData)
+    run(modelDir, inData, fs)
 
 if __name__ == '__main__':
     _tests()

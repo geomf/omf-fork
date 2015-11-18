@@ -23,7 +23,7 @@ _omfDir = os.path.dirname(os.path.dirname(_myDir))
 sys.path.append(_omfDir)
 
 # OMF imports.
-import feeder
+from omf import feeder
 import logging
 
 
@@ -125,7 +125,7 @@ def runInFilesystem(feederTree, attachments=[], keepFiles=False, workDir=None, g
                 try:
                     shutil.rmtree(workDir)
                     break
-                except WindowsError:
+                except OSError:
                     # HACK: if we don't sleep 1 second, windows intermittantly fails to delete things and an exception is thrown.
                     # Probably cus dropbox is monkeying around in these folders
                     # on my dev machine. Disabled for now since it works when

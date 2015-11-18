@@ -15,7 +15,6 @@ import json
 import os
 import logging
 import datetime
-import time
 
 from omf.persistence.persistence import Persistence
 from omf.model.user import User
