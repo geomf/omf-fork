@@ -50,3 +50,4 @@ Flask-Migrate
 psycopg2
 enum34
 GeoAlchemy2
+pyproj

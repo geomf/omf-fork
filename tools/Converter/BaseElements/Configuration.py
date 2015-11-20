@@ -20,8 +20,8 @@ class Configuration(Element, Base):
 
     configuration_tags = ['spacing', 'conductor_A', 'conductor_B', 'conductor_C', 'conductor_N']
 
-    def __init__(self, element, feeder_id):
-        super(Configuration, self).__init__(element, feeder_id)
+    def __init__(self, element, feeder):
+        super(Configuration, self).__init__(element, feeder)
         self.configuration_names = self._get_configuration_tags(element)
 
     @staticmethod

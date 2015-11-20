@@ -15,6 +15,7 @@ import json
 import logging
 from os.path import basename
 from sqlalchemy.orm import sessionmaker
+from pyproj import Proj
 
 from BaseElements.BaseNode import BaseNode
 from BaseElements.ChildNode import ChildNode
@@ -58,8 +59,8 @@ class Converter(object):
     feeder_config_types = ["climate", "player", "recorder"]
 
     @staticmethod
-    def convert(feeder_id, feeder_name, engine):
-        with open(feeder_name) as data_file:
+    def convert(feeder_path, engine, lon, lat):
+        with open(feeder_path) as data_file:
             data = json.load(data_file)
 
         configList = []
@@ -70,6 +71,13 @@ class Converter(object):
 
         for node in data["nodes"]:
             nodesList[node["treeIndex"]] = node
+
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        feeder = Feeder(basename(feeder_path), lon, lat)
+        session.add(feeder)
+        session.flush()
 
         for key, element in data["tree"].iteritems():
             if "object" not in element:
@@ -85,18 +93,17 @@ class Converter(object):
             class_Name = Converter.read_type[element["object"]]
             element = class_Name.update_geo_data(element, int(key), nodesList)
             if class_Name.validate(element):
-                ele = class_Name(element, feeder_id)
+                ele = class_Name(element, feeder)
                 if isinstance(ele, BaseNode) or isinstance(ele, SuperConfiguration):
                     firstElementList[ele.name] = ele
                     if isinstance(ele, ChildNode):
-                        thirdElementList[ele.name] = EdgeElements.ChildLine(element, feeder_id)
+                        thirdElementList[ele.name] = EdgeElements.ChildLine(element, feeder)
                 elif isinstance(ele, Configuration):
                     secondElementList[ele.name] = ele
                 elif isinstance(ele, Edge):
                     thirdElementList[ele.name] = ele
 
-        Session = sessionmaker(bind=engine)
-        session = Session()
+        feeder.set_config(configList)
 
         for ele in firstElementList.values():
             session.add(ele)
@@ -113,8 +120,17 @@ class Converter(object):
             ele.perform_post_update(Converter.merge_two_dicts(firstElementList, secondElementList))
             session.add(ele)
 
-        session.add(Feeder(basename(feeder_name), configList))
         session.commit()
+
+    @staticmethod
+    def deconvert(feeder_id, engine):
+        #TODO: Implement it
+        Session = sessionmaker(bind=engine)
+        session = Session()
+
+        nodes_list = session.query(BaseNode).filter(BaseNode.feeder_id == feeder_id).all()
+        for node in nodes_list:
+            print(node.name, node.power)
 
     @staticmethod
     def merge_two_dicts(x, y):

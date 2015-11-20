@@ -44,8 +44,8 @@ class TriplexLine(Edge):
 
 
 class ChildLine(Edge):
-    def __init__(self, element, feeder_id):
-        super(Edge, self).__init__(element, feeder_id)
+    def __init__(self, element, feeder):
+        super(Edge, self).__init__(element, feeder)
         self.parent = element["parent"]
 
         self.from_name = element["parent"]

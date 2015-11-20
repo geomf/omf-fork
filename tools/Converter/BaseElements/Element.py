@@ -28,9 +28,9 @@ class Element(object):
     configuration_tags = []
     configuration_names = {}
 
-    def __init__(self, element, feeder_id):
+    def __init__(self, element, feeder):
         self.name = element["name"]
-        self.feeder_id = feeder_id
+        self.feeder_id = feeder.id
         self.power = element["object"]
         self.objectType = element["object"]
         self.tags = {}

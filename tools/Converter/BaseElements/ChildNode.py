@@ -17,8 +17,8 @@ from BaseNode import BaseNode
 # underground_line and overhead_line have unused lat lon (transformer not)
 class ChildNode(BaseNode):
 
-    def __init__(self, element, feeder_id):
-        super(ChildNode, self).__init__(element, feeder_id)
+    def __init__(self, element, feeder):
+        super(ChildNode, self).__init__(element, feeder)
         self.tags['child_point'] = 'True'
 
     @staticmethod

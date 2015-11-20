@@ -26,8 +26,8 @@ class Edge(Element, Base):
 
     configuration_tags = ['configuration']
 
-    def __init__(self, element, feeder_id):
-        super(Edge, self).__init__(element, feeder_id)
+    def __init__(self, element, feeder):
+        super(Edge, self).__init__(element, feeder)
         self.from_name = element["from"]
         self.to_name = element["to"]
         self.configuration_names = self._get_configuration_tags(element)

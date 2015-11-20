@@ -26,24 +26,23 @@ class BaseNode(Element, Base):
     lon = Column(Integer)
     geo_point = Column(Geometry('POINT'))
 
-    def __init__(self, element, feeder_id):
-        super(BaseNode, self).__init__(element, feeder_id)
+    def __init__(self, element, feeder):
+        super(BaseNode, self).__init__(element, feeder)
         # change lat with lon in purpose!!!
         _lon = element["latitude"]
         _lat = element["longitude"]
 
-        self.lon = float(_lon) * 10
-        self.lat = -float(_lat) * 10
-        self.lon += -10281993
-        self.lat += 4715996  # 4695996
+        self.lon = float(_lon) * 10 + feeder.lon
+        self.lat = float(_lat) * 10 + feeder.lat
 
         self.point = "{} {}".format(self.lon, self.lat)
         self.geo_point = 'SRID=900913;POINT( {} )'.format(self.point)
 
-        # change lat lon to google mercator. 			//39.0085476,-92.3647192
-        # in mercator, position is stored in cm
-        self.lat *= 100
-        self.lon *= 100
+    def get_json_dict(self):
+        #TODO: FINISH HIM!!
+        json_dict = {}
+        json_dict["name"] = self.name
+        json_dict["object"] = self.power
 
     @staticmethod
     def validate(element):
