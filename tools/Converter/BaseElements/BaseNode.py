@@ -44,6 +44,7 @@ class BaseNode(Element, Base):
         json_dict["name"] = self.name
         json_dict["object"] = self.power
 
+
     @staticmethod
     def validate(element):
         if "longitude" not in element:

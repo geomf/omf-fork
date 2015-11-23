@@ -46,6 +46,12 @@ class Edge(Element, Base):
         return 'SRID=900913;LINESTRING( {}, {} )'.format(_from.point, _to.point)
 
     def perform_post_update(self, firstElementList):
+        if self.from_name not in firstElementList:
+            logging.warning('Edge: {} from node: {} does not exist, cannot create geo data'.format(self.name, self.from_name))
+            return
+        if self.to_name not in firstElementList:
+            logging.warning('Edge: {} to node: {} does not exist, cannot create geo data'.format(self.name, self.to_name))
+            return
         _from = firstElementList[self.from_name]
         _to = firstElementList[self.to_name]
         self.nodes = [_from.id, _to.id]

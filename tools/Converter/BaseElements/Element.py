@@ -13,16 +13,20 @@
 
 import abc
 import logging
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.dialects import postgres
+from sqlalchemy.ext.declarative import declared_attr
 
 
 class Element(object):
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    feeder_id = Column(Integer)
     power = Column(String)
     tags = Column(postgres.HSTORE)
+
+    @declared_attr
+    def feeder_id(cls):
+        return Column(Integer, ForeignKey('feeder.id'))
 
     tag_names = []
     configuration_tags = []
@@ -35,7 +39,7 @@ class Element(object):
         self.objectType = element["object"]
         self.tags = {}
         for tag in self.tag_names:
-            self.tags[tag] = element[tag] if tag in element else None
+            self.tags[tag] = str(element[tag]) if tag in element else None
 
     @abc.abstractmethod
     def perform_post_update(self, firstElementList):
