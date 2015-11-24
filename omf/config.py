@@ -27,6 +27,7 @@ class Config(object):
     SENDER_EMAIL = 'debug@debug.com'
     SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/user.db'
     PERSISTENCE_TYPE = 'DATABASE'
+    POSTGIS_DB_URI = 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development'
 
 class DebugConfig(Config):
     pass
@@ -44,7 +45,7 @@ class Dp2Config(Config):
         self.vcap_services =  json.loads(os.environ['VCAP_SERVICES'])
         self.vcap_application =  json.loads(os.environ['VCAP_APPLICATION'])
         self.APPLICATION_URL = 'http://' + self.vcap_application['application_uris'][0]
-
+        self.POSTGIS_DB_URI = os.environ['POSTGIS_DB_URI']
         redis_session_service = self.__get_service_configuration('redis28', self.SESSION_SERVICE_NAME)
         redis_session_credentials = redis_session_service['credentials']
         redis_session = redis.Redis(host=redis_session_credentials['hostname'], port=redis_session_credentials['port'],

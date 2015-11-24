@@ -15,8 +15,8 @@ import logging
 from sqlalchemy import Column, Integer
 from geoalchemy2 import Geometry
 
-from Element import Element
-from DB import Base
+from omf.tools.Converter.BaseElements.Element import Element
+from omf.tools.Converter.BaseElements.DB import Base
 
 
 class BaseNode(Element, Base):
@@ -30,10 +30,10 @@ class BaseNode(Element, Base):
         super(BaseNode, self).__init__(element, feeder)
         # change lat with lon in purpose!!!
 
-        self.lon = float(element["longitude"]) * 10 + feeder.lon
-        self.lat = float(element["latitude"]) * 10 + feeder.lat
+        self.lon = float(element["longitude"]) * 1000 + feeder.lon
+        self.lat = float(element["latitude"]) * 1000 + feeder.lat
 
-        self.point = "{} {}".format(self.lon, self.lat)
+        self.point = "{} {}".format(self.lon/100, self.lat/100)
         self.geo_point = 'SRID=900913;POINT( {} )'.format(self.point)
 
     def get_json_dict(self):

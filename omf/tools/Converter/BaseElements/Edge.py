@@ -15,8 +15,8 @@ from sqlalchemy import Column, BigInteger
 from sqlalchemy.dialects import postgres
 from geoalchemy2 import Geometry
 
-from Element import Element
-from DB import Base
+from omf.tools.Converter.BaseElements.Element import Element
+from omf.tools.Converter.BaseElements.DB import Base
 
 
 class Edge(Element, Base):

@@ -11,7 +11,7 @@
 # more details.
 #
 
-from Configuration import Configuration
+from omf.tools.Converter.BaseElements.Configuration import Configuration
 
 
 class SuperConfiguration(Configuration):

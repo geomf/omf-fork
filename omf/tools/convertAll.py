@@ -12,21 +12,19 @@
 #
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine
 
-from Converter.BaseElements.DB import set_db
+
+from omf.tools.Converter.BaseElements.DB import set_db
 
 db = declarative_base()
 set_db(db)
 
-engine = create_engine('postgresql://<db_user>:<db_password>@localhost:5432/ROS_development')
 
-from Converter.BaseElements import *
-from Converter.Converter import Converter
+from omf.tools.Converter.Converter import Converter
 
-db.metadata.create_all(engine)
 
-feeder_path = '../omf/data/Feeder/public/ABEC Columbia.json'
-#feeder_path = '../omf/data/Feeder/admin/Autocli Alberich Calibrated.json'
 
-Converter.convert(feeder_path, engine, -92.3395017, 38.9589246)
+feeder_path = '../data/Feeder/public/ABEC Columbia.json'
+#feeder_path = '../data/Feeder/admin/Autocli Alberich Calibrated.json'
+
+Converter.convert(feeder_path, 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development', -92.3395017, 38.9589246)

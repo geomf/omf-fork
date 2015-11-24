@@ -26,6 +26,7 @@ applications:
     OMF_ENVIRONMENT: PROD
     LOG_LEVEL: INFO
     SENDER_EMAIL: admin@hutchpcn15.intel.com
+    POSTGIS_DB_URI: postgresql://<db_user>:<db_password>@<db_host>:5432/osm_rps_dev
 services:
 # to create this service use: cf cs redis28 free omf_redis_session_database
 - omf_redis_session_database

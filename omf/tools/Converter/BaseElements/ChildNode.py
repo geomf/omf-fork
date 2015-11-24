@@ -12,7 +12,7 @@
 #
 
 import logging
-from BaseNode import BaseNode
+from omf.tools.Converter.BaseElements.BaseNode import BaseNode
 
 # underground_line and overhead_line have unused lat lon (transformer not)
 class ChildNode(BaseNode):

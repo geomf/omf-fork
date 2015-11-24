@@ -18,7 +18,7 @@ from sqlalchemy.dialects import postgres
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import relationship
 
-from Feeder import Feeder
+from omf.tools.Converter.BaseElements.Feeder import Feeder
 
 class Element(object):
     id = Column(Integer, primary_key=True)

@@ -15,14 +15,15 @@ import json
 import logging
 from os.path import basename
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
 
-from BaseElements.BaseNode import BaseNode
-from BaseElements.ChildNode import ChildNode
-from BaseElements.Edge import Edge
-from BaseElements.SuperConfiguration import SuperConfiguration
-from BaseElements.Configuration import Configuration
-from BaseElements.Feeder import Feeder
-from Elements import *
+from omf.tools.Converter.BaseElements.BaseNode import BaseNode
+from omf.tools.Converter.BaseElements.ChildNode import ChildNode
+from omf.tools.Converter.BaseElements.Edge import Edge
+from omf.tools.Converter.BaseElements.SuperConfiguration import SuperConfiguration
+from omf.tools.Converter.BaseElements.Configuration import Configuration
+from omf.tools.Converter.BaseElements.Feeder import Feeder
+from omf.tools.Converter.Elements import *
 
 class Converter(object):
     read_type = {
@@ -58,7 +59,7 @@ class Converter(object):
     feeder_config_types = ["climate", "player", "recorder"]
 
     @staticmethod
-    def convert(feeder_path, engine, lon, lat):
+    def convert(feeder_path, db_address, lon, lat):
         with open(feeder_path) as data_file:
             data = json.load(data_file)
 
@@ -71,6 +72,7 @@ class Converter(object):
         for node in data["nodes"]:
             nodesList[node["treeIndex"]] = node
 
+        engine = create_engine(db_address)
         Session = sessionmaker(bind=engine)
         session = Session()
 

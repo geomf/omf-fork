@@ -11,8 +11,8 @@
 # more details.
 #
 
-from Element import Element
-from DB import Base
+from omf.tools.Converter.BaseElements.Element import Element
+from omf.tools.Converter.BaseElements.DB import Base
 
 
 class Configuration(Element, Base):

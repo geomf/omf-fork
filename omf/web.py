@@ -46,6 +46,15 @@ from omf.model.user import User
 from omf.persistence.databasePersistence import DatabasePersistence
 from omf.persistence.filePersistence import FilePersistence
 
+from omf.tools.Converter.BaseElements.DB import set_db as set_postgis_db
+from sqlalchemy.ext.declarative import declarative_base
+
+postgis_db = declarative_base()
+set_postgis_db(postgis_db)
+from omf.tools.Converter.Converter import Converter
+
+_LAT = 38.9589246
+_LON = -92.3395017
 
 Session(app)
 mail = Mail(app)
@@ -557,9 +566,11 @@ def cymeImport():
     return redirect("/#feeders")
 
 def startImportProcess(feederName, convertFunc, convertArgs):
-    if not fs.exists("data/Conversion/" + current_user_name()):
-        fs.create_dir("data/Conversion/" + current_user_name())
-    fs.save("data/Conversion/" + current_user_name() + "/" + feederName + ".json", "WORKING")
+    user_conversion_folder = "data/Conversion/" + current_user_name()
+    if not fs.exists(user_conversion_folder):
+        fs.create_dir(user_conversion_folder)
+    file_name = "/" + feederName + ".json"
+    fs.save(user_conversion_folder + file_name, "WORKING")
 
     importProc = Process(
         target=importBackground, args=[current_user_name(), feederName, convertFunc, convertArgs])
@@ -568,6 +579,9 @@ def startImportProcess(feederName, convertFunc, convertArgs):
 
 def importBackground(owner, feederName, convertFunc, convertArgs):
     ''' Function to run in the background for Milsoft import. '''
+    file_name = "/" + feederName + ".json"
+    user_conversion_folder = "data/Conversion/" + owner
+    user_feeder_folder = "data/Feeder/" + owner
     newFeeder = dict(**feeder.newFeederWireframe)
     [newFeeder["tree"], xScale, yScale] = convertFunc(*convertArgs)
     newFeeder["layoutVars"]["xScale"] = xScale
@@ -576,8 +590,9 @@ def importBackground(owner, feederName, convertFunc, convertArgs):
     with open("./schedules.glm", "r") as schedFile:
         newFeeder["attachments"] = {"schedules.glm": schedFile.read()}
     logger.info('Save new feeder %s as new json file', feederName)
-    fs.save("data/Feeder/" + owner + "/" + feederName + ".json", json.dumps(newFeeder, indent=4))
-    fs.remove("data/Conversion/" + owner + "/" + feederName + ".json")
+    fs.save(user_feeder_folder + file_name, json.dumps(newFeeder, indent=4))
+    fs.remove(user_conversion_folder + file_name)
+    Converter.convert(user_feeder_folder + file_name, the_config.POSTGIS_DB_URI, _LON, _LAT)
 
 
 @app.route("/newBlankFeeder/", methods=["POST"])

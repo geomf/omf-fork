@@ -14,7 +14,7 @@ from sqlalchemy import Column, Integer, String
 from sqlalchemy.dialects import postgres
 from pyproj import Proj
 
-from ..BaseElements.DB import Base
+from omf.tools.Converter.BaseElements.DB import Base
 
 class Feeder(Base):
     __tablename__ = 'feeder'
