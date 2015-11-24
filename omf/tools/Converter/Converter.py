@@ -15,7 +15,6 @@ import json
 import logging
 from os.path import basename
 from sqlalchemy.orm import sessionmaker
-from pyproj import Proj
 
 from BaseElements.BaseNode import BaseNode
 from BaseElements.ChildNode import ChildNode
@@ -127,10 +126,26 @@ class Converter(object):
         #TODO: Implement it
         Session = sessionmaker(bind=engine)
         session = Session()
+        tree = {}
 
         nodes_list = session.query(BaseNode).filter(BaseNode.feeder_id == feeder_id).all()
+        edge_list = session.query(Edge).filter(Edge.feeder_id == feeder_id).all()
+        configuration_list = session.query(Configuration).filter(Configuration.feeder_id == feeder_id).all()
         for node in nodes_list:
-            print(node.name, node.power)
+            json_dict = node.get_json_dict()
+            tree[json_dict["name"]] =json_dict
+            print(node.name, json_dict)
+        for edge in edge_list:
+            json_dict = edge.get_json_dict(nodes_list, configuration_list)
+            tree[json_dict["name"]] =json_dict
+            print(edge.name, json_dict)
+        for configuration in configuration_list:
+            json_dict = configuration.get_json_dict(configuration_list)
+            tree[json_dict["name"]] =json_dict
+            print(configuration.name, json_dict)
+
+        with open('asdfg.json', 'w') as file:
+            json.dump(tree, file)
 
     @staticmethod
     def merge_two_dicts(x, y):

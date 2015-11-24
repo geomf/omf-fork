@@ -24,6 +24,11 @@ class Configuration(Element, Base):
         super(Configuration, self).__init__(element, feeder)
         self.configuration_names = self._get_configuration_tags(element)
 
+    def get_json_dict(self, configuration_list):
+        json_dict = super(Configuration, self).get_json_dict()
+        json_dict = self._add_configurations_to_json_dict(json_dict, configuration_list)
+        return json_dict
+
     @staticmethod
     def validate(element):
         return Element.validate(element)

@@ -32,6 +32,15 @@ class Edge(Element, Base):
         self.to_name = element["to"]
         self.configuration_names = self._get_configuration_tags(element)
 
+    def get_json_dict(self, nodes_list, configuration_list):
+        json_dict = super(Edge, self).get_json_dict()
+        from_id = self.nodes[0]
+        to_id = self.nodes[1]
+        json_dict["from"] = next((x.name for x in nodes_list if x.id == from_id), None)
+        json_dict["to"] = next((x.name for x in nodes_list if x.id == to_id), None)
+        json_dict = self._add_configurations_to_json_dict(json_dict, configuration_list)
+        return json_dict
+
     @staticmethod
     def validate(element):
         if "from" not in element:

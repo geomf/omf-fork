@@ -29,21 +29,18 @@ class BaseNode(Element, Base):
     def __init__(self, element, feeder):
         super(BaseNode, self).__init__(element, feeder)
         # change lat with lon in purpose!!!
-        _lon = element["latitude"]
-        _lat = element["longitude"]
 
-        self.lon = float(_lon) * 10 + feeder.lon
-        self.lat = float(_lat) * 10 + feeder.lat
+        self.lon = float(element["longitude"]) * 10 + feeder.lon
+        self.lat = float(element["latitude"]) * 10 + feeder.lat
 
         self.point = "{} {}".format(self.lon, self.lat)
         self.geo_point = 'SRID=900913;POINT( {} )'.format(self.point)
 
     def get_json_dict(self):
-        #TODO: FINISH HIM!!
-        json_dict = {}
-        json_dict["name"] = self.name
-        json_dict["object"] = self.power
-
+        json_dict = super(BaseNode, self).get_json_dict()
+        json_dict["latitude"] = (self.lat - self.feeder.lat) / 10
+        json_dict["longitude"] = (self.lon - self.feeder.lon) / 10
+        return json_dict
 
     @staticmethod
     def validate(element):

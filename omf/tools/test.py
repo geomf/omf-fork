@@ -26,7 +26,4 @@ from Converter.Converter import Converter
 
 db.metadata.create_all(engine)
 
-#feeder_path = '../omf/data/Feeder/public/ABEC Columbia.json'
-feeder_path = '../omf/data/Feeder/admin/Autocli Alberich Calibrated.json'
-
-Converter.convert(feeder_path, engine, -92.3395017, 38.9589246)
+Converter.deconvert(11, engine)
