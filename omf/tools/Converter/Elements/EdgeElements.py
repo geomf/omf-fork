@@ -47,7 +47,6 @@ class ChildLine(Edge):
     def __init__(self, element, feeder):
         super(Edge, self).__init__(element, feeder)
         self.parent = element["parent"]
-
         self.from_name = element["parent"]
         self.to_name = element["name"]
         self.power += "_connection"

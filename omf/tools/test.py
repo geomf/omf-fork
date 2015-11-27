@@ -10,7 +10,7 @@
 # FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
 # more details.
 #
-
+import json
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 
@@ -26,4 +26,11 @@ from Converter.Converter import Converter
 
 db.metadata.create_all(engine)
 
-Converter.deconvert(11, engine)
+i = 1
+
+while i < 14:
+    feeder_json = Converter.deconvert(1, engine)
+
+    with open(str(i)+'.json', 'w') as file:
+        json.dump(feeder_json, file)
+    i += 1

@@ -13,7 +13,7 @@
 
 from ..BaseElements.SuperConfiguration import SuperConfiguration
 
-__all__ = ["LineSpacing", "OverheadLineConductor", "UndergroundLineConductor"]
+__all__ = ["LineSpacing", "OverheadLineConductor", "UndergroundLineConductor", "TriplexLineConductor"]
 
 
 class LineSpacing(SuperConfiguration):
@@ -25,4 +25,7 @@ class UndergroundLineConductor(SuperConfiguration):
 
 
 class OverheadLineConductor(SuperConfiguration):
+    tag_names = ["geometric_mean_radius", "resistance"]
+
+class TriplexLineConductor(SuperConfiguration):
     tag_names = ["geometric_mean_radius", "resistance"]

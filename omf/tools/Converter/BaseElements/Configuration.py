@@ -18,7 +18,7 @@ from omf.tools.Converter.BaseElements.DB import Base
 class Configuration(Element, Base):
     __tablename__ = 'planet_osm_rels'
 
-    configuration_tags = ['spacing', 'conductor_A', 'conductor_B', 'conductor_C', 'conductor_N']
+    configuration_tags = ['spacing', 'conductor_A', 'conductor_B', 'conductor_C', 'conductor_N', 'conductor_1', 'conductor_2']
 
     def __init__(self, element, feeder):
         super(Configuration, self).__init__(element, feeder)
@@ -35,3 +35,4 @@ class Configuration(Element, Base):
 
     def perform_post_update(self, firstElementList):
         self._update_configuration_ids(firstElementList)
+        return True

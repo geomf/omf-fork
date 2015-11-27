@@ -39,9 +39,11 @@ class Converter(object):
                      "line_spacing": SuperConfigurationElements.LineSpacing,
                      "overhead_line_conductor": SuperConfigurationElements.OverheadLineConductor,
                      "underground_line_conductor": SuperConfigurationElements.UndergroundLineConductor,
+                     "triplex_line_conductor": SuperConfigurationElements.TriplexLineConductor,
                      "line_configuration": ConfigurationElements.LineConfiguration,
                      "transformer_configuration": ConfigurationElements.TransformerConfiguration,
                      "regulator_configuration":   ConfigurationElements.RegulatorConfiguration,
+                     "triplex_line_configuration":   ConfigurationElements.TriplexLineConfiguration,
                      "triplex_node": ChildNodeElements.TriplexNode,
                      "load": ChildNodeElements.Load,
                      "capacitor": ChildNodeElements.Capacitor,
@@ -56,10 +58,11 @@ class Converter(object):
                      "triplex_load": ChildNodeElements.TriplexLoad
                 }
 
-    feeder_config_types = ["climate", "player", "recorder"]
+    feeder_config_types = ["climate", "player", "recorder", "volt_var_control"]
 
     @staticmethod
     def convert(feeder_path, db_address, lon, lat):
+        logging.warning("Converting feeder: {}".format(feeder_path))
         with open(feeder_path) as data_file:
             data = json.load(data_file)
 
@@ -70,7 +73,7 @@ class Converter(object):
         thirdElementList = {}
 
         for node in data["nodes"]:
-            nodesList[node["treeIndex"]] = node
+            nodesList[str(node["treeIndex"])] = node
 
         engine = create_engine(db_address)
         Session = sessionmaker(bind=engine)
@@ -82,7 +85,7 @@ class Converter(object):
 
         for key, element in data["tree"].iteritems():
             if "object" not in element:
-                logging.warning("Object without a type - {}, saving to feeder config".format(element))
+                #logging.warning("Object without a type - {}, saving to feeder config".format(element))
                 configList.append(str(Converter.byteify(element)))
                 continue
             if element["object"] in Converter.feeder_config_types:
@@ -92,7 +95,7 @@ class Converter(object):
                 logging.warning("not yet supported object type - {}".format(element["object"]))
                 continue
             class_Name = Converter.read_type[element["object"]]
-            element = class_Name.update_geo_data(element, int(key), nodesList)
+            element = class_Name.update_geo_data(element, key, nodesList)
             if class_Name.validate(element):
                 ele = class_Name(element, feeder)
                 if isinstance(ele, BaseNode) or isinstance(ele, SuperConfiguration):
@@ -118,36 +121,56 @@ class Converter(object):
             secondElementList[ele.name].id = ele.id
 
         for ele in thirdElementList.values():
-            ele.perform_post_update(Converter.merge_two_dicts(firstElementList, secondElementList))
-            session.add(ele)
+            if ele.perform_post_update(Converter.merge_two_dicts(firstElementList, secondElementList)):
+                session.add(ele)
 
-        session.commit()
+        if thirdElementList and firstElementList:
+            session.commit()
+        else:
+            logging.warning("No edge or node can be added to Feeder: {}, conversion failed".format(feeder.name))
 
     @staticmethod
     def deconvert(feeder_id, engine):
-        #TODO: Implement it
         Session = sessionmaker(bind=engine)
         session = Session()
+
+        feeder = session.query(Feeder).filter(Feeder.id == feeder_id).first()
+        if feeder == None:
+            logging.warning("Feeder wit id: {} does not exist, deconversion failed")
+            return
+
         tree = {}
+
+        #TODO: Get feeder config and save in json
+        """
+        i = 0
+        for config in feeder.config:
+            tree[str(i)] = json.loads(config)
+            i += 1
+        """
 
         nodes_list = session.query(BaseNode).filter(BaseNode.feeder_id == feeder_id).all()
         edge_list = session.query(Edge).filter(Edge.feeder_id == feeder_id).all()
         configuration_list = session.query(Configuration).filter(Configuration.feeder_id == feeder_id).all()
         for node in nodes_list:
-            json_dict = node.get_json_dict()
+            json_dict = node.get_json_dict(edge_list)
             tree[json_dict["name"]] =json_dict
-            print(node.name, json_dict)
         for edge in edge_list:
-            json_dict = edge.get_json_dict(nodes_list, configuration_list)
-            tree[json_dict["name"]] =json_dict
-            print(edge.name, json_dict)
+            if "child_line" not in edge.tags:
+                json_dict = edge.get_json_dict(nodes_list, configuration_list)
+                tree[json_dict["name"]] =json_dict
         for configuration in configuration_list:
             json_dict = configuration.get_json_dict(configuration_list)
             tree[json_dict["name"]] =json_dict
-            print(configuration.name, json_dict)
 
-        with open('asdfg.json', 'w') as file:
-            json.dump(tree, file)
+        feeder_json = {}
+        feeder_json["tree"] = tree
+        feeder_json["links"] = []
+        feeder_json["hiddenNodes"] = []
+        feeder_json["hiddenLinks"] = []
+        feeder_json["nodes"] = []
+
+        return feeder_json
 
     @staticmethod
     def merge_two_dicts(x, y):

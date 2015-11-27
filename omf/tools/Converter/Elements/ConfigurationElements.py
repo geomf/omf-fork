@@ -27,3 +27,6 @@ class RegulatorConfiguration(Configuration):
     tag_names = ["Control", "raise_taps", "PT_phase", "band_center", "current_transducer_ratio", "power_transducer_ratio",
             "compensator_x_setting_A", "time_delay", "connect_type", "regulation", "CT_phase", "band_width",
             "tap_pos_A", "control_level", "compensator_r_setting_A", "Type", "lower_taps"]
+
+class TriplexLineConfiguration(Configuration):
+    tag_names = ["diameter", "insulation_thickness"]

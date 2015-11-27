@@ -17,7 +17,7 @@ from pyproj import Proj
 from omf.tools.Converter.BaseElements.DB import Base
 
 class Feeder(Base):
-    __tablename__ = 'feeder'
+    __tablename__ = 'feeders'
 
     id = Column(Integer, primary_key=True)
     name = Column(String)

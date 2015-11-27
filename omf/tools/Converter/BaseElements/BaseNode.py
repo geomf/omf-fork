@@ -28,7 +28,6 @@ class BaseNode(Element, Base):
 
     def __init__(self, element, feeder):
         super(BaseNode, self).__init__(element, feeder)
-        # change lat with lon in purpose!!!
 
         self.lon = float(element["longitude"]) * 1000 + feeder.lon
         self.lat = float(element["latitude"]) * 1000 + feeder.lat
@@ -36,10 +35,13 @@ class BaseNode(Element, Base):
         self.point = "{} {}".format(self.lon/100, self.lat/100)
         self.geo_point = 'SRID=900913;POINT( {} )'.format(self.point)
 
-    def get_json_dict(self):
+    def get_json_dict(self, edge_list):
         json_dict = super(BaseNode, self).get_json_dict()
-        json_dict["latitude"] = (self.lat - self.feeder.lat) / 10
-        json_dict["longitude"] = (self.lon - self.feeder.lon) / 10
+        json_dict["latitude"] = (self.lat - self.feeder.lat) / 1000.0
+        json_dict["longitude"] = (self.lon - self.feeder.lon) / 1000.0
+        if "child_point" in self.tags:
+            json_dict["parent"] = next((x.name for x in edge_list if x.nodes[1] == self.id), None)
+            del json_dict["child_point"]
         return json_dict
 
     @staticmethod

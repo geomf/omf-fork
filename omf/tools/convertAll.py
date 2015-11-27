@@ -11,20 +11,23 @@
 # more details.
 #
 
+from os import listdir
+from os.path import join
+
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine
 
-
-from omf.tools.Converter.BaseElements.DB import set_db
+from Converter.BaseElements.DB import set_db
 
 db = declarative_base()
 set_db(db)
 
+from Converter.BaseElements import *
+from Converter.Converter import Converter
 
-from omf.tools.Converter.Converter import Converter
+i = 0.0
 
-
-
-feeder_path = '../data/Feeder/public/ABEC Columbia.json'
-#feeder_path = '../data/Feeder/admin/Autocli Alberich Calibrated.json'
-
-Converter.convert(feeder_path, 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development', -92.3395017, 38.9589246)
+for file in listdir('../data/Feeder/public/'):
+    feeder_path = join("../data/Feeder/public/", file)
+    Converter.convert(feeder_path, 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development', -92.3395017 + i, 38.9589246)
+    i += 0.5

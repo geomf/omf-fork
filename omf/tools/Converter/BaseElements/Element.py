@@ -28,7 +28,7 @@ class Element(object):
 
     @declared_attr
     def feeder_id(cls):
-        return Column(Integer, ForeignKey('feeder.id'))
+        return Column(Integer, ForeignKey('feeders.id'))
 
     @declared_attr
     def feeder(cls):
@@ -64,7 +64,7 @@ class Element(object):
 
     @abc.abstractmethod
     def perform_post_update(self, firstElementList):
-        return
+        return True
 
     @staticmethod
     def validate(element):
@@ -84,7 +84,6 @@ class Element(object):
                 configuration_names[config_name] = element[config_name]
         return configuration_names
 
-    #TODO: zmienic nazwe!!!
     def _add_configurations_to_json_dict(self, json_dict, configuration_list):
         for config_name in self.configuration_tags:
             if config_name in self.tags:
