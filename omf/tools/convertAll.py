@@ -17,13 +17,12 @@ from os.path import join
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 
-from Converter.BaseElements.DB import set_db
+from omf.tools.Converter.BaseElements.DB import set_db
 
 db = declarative_base()
 set_db(db)
 
-from Converter.BaseElements import *
-from Converter.Converter import Converter
+from omf.tools.Converter.Converter import Converter
 
 i = 0.0
 
