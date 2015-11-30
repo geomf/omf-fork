@@ -33,11 +33,11 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
         inJson["modelName"] = modelName
         inJson["user"] = user
         allInputData = json.dumps(inJson)
-    except HdfsFileNotFoundException, IOError:
+    except (HdfsFileNotFoundException, IOError):
         allInputData = None
     try:
         allOutputData = fs.open(pJoin(modelDir, "allOutputData.json")).read()
-    except HdfsFileNotFoundException, IOError:
+    except (HdfsFileNotFoundException, IOError):
         allOutputData = None
     if absolutePaths:
         # Parent of current folder.
