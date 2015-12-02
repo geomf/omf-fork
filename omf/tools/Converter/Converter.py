@@ -24,8 +24,10 @@ from omf.tools.Converter.BaseElements.SuperConfiguration import SuperConfigurati
 from omf.tools.Converter.BaseElements.Configuration import Configuration
 from omf.tools.Converter.BaseElements.Feeder import Feeder
 from omf.tools.Converter.Elements import *
+import omf.filesystem
 
 class Converter(object):
+    fs = omf.filesystem.Filesystem().fs
     read_type = {
                      "triplex_meter": NodeElements.TriplexMeter,
                      "node": NodeElements.Node,
@@ -63,7 +65,7 @@ class Converter(object):
     @staticmethod
     def convert(feeder_path, db_address, lon, lat):
         logging.warning("Converting feeder: {}".format(feeder_path))
-        with open(feeder_path) as data_file:
+        with Converter.fs.open(feeder_path) as data_file:
             data = json.load(data_file)
 
         configList = []
@@ -85,7 +87,7 @@ class Converter(object):
 
         for key, element in data["tree"].iteritems():
             if "object" not in element:
-                #logging.warning("Object without a type - {}, saving to feeder config".format(element))
+                logging.debug("Object without a type - {}, saving to feeder config".format(element))
                 configList.append(str(Converter.byteify(element)))
                 continue
             if element["object"] in Converter.feeder_config_types:
@@ -130,13 +132,16 @@ class Converter(object):
             logging.warning("No edge or node can be added to Feeder: {}, conversion failed".format(feeder.name))
 
     @staticmethod
-    def deconvert(feeder_id, engine):
+    def deconvert(feeder_id, db_address):
+        logging.info("Deconverting feeder: {}".format(feeder_id))
+        i = 0
+        engine = create_engine(db_address)
         Session = sessionmaker(bind=engine)
         session = Session()
 
         feeder = session.query(Feeder).filter(Feeder.id == feeder_id).first()
         if feeder == None:
-            logging.warning("Feeder wit id: {} does not exist, deconversion failed")
+            logging.warning("Feeder with id: {} does not exist, deconversion failed".format(feeder_id))
             return
 
         tree = {}
@@ -154,14 +159,17 @@ class Converter(object):
         configuration_list = session.query(Configuration).filter(Configuration.feeder_id == feeder_id).all()
         for node in nodes_list:
             json_dict = node.get_json_dict(edge_list)
-            tree[json_dict["name"]] =json_dict
+            tree[str(i)] = json_dict
+            i += 1
         for edge in edge_list:
             if "child_line" not in edge.tags:
                 json_dict = edge.get_json_dict(nodes_list, configuration_list)
-                tree[json_dict["name"]] =json_dict
+                tree[str(i)] = json_dict
+                i += 1
         for configuration in configuration_list:
             json_dict = configuration.get_json_dict(configuration_list)
-            tree[json_dict["name"]] =json_dict
+            tree[str(i)] = json_dict
+            i += 1
 
         feeder_json = {}
         feeder_json["tree"] = tree
@@ -170,7 +178,7 @@ class Converter(object):
         feeder_json["hiddenLinks"] = []
         feeder_json["nodes"] = []
 
-        return feeder_json
+        return (feeder.name, feeder_json)
 
     @staticmethod
     def merge_two_dicts(x, y):
