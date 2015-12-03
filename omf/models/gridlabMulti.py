@@ -135,7 +135,7 @@ def runForeground(modelDir, inputDict, fs):
             fs.export_from_fs_to_local(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                                              pJoin(modelDir, feederName, "feeder.json"))
             inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
-                inputDict["zipCode"])
+                inputDict["zipCode"], fs)
             fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                                        pJoin(modelDir, feederName, "climate.tmy2"))
             try:

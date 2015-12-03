@@ -65,7 +65,7 @@ def run(modelDir, inputDict, fs):
         simLengthUnits = "hours"
         # Associate zipcode to climate data
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
-            inputDict["zipCode"])
+            inputDict["zipCode"], fs)
         inverterSizeAC = float(inputDict.get("systemSize", 0))
         if (inputDict.get("systemDcSize", 0) == "-"):
             arraySizeDC = 1.3908 * inverterSizeAC

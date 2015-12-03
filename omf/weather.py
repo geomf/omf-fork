@@ -901,7 +901,7 @@ def _processWeather(start, end, airport, workDir, interpolate="linear"):
                                                                           line.Humi, line.Solar[0], line.Solar[1], line.Solar[2]))
 
 
-def zipCodeToClimateName(zipCode):
+def zipCodeToClimateName(zipCode, fs):
     ''' Maps zipcode from excel data to city, state, lat/lon. '''
     logger.info('Getting climate data for zipcode: %s', zipCode)
     # From excel file at:
@@ -917,14 +917,14 @@ def zipCodeToClimateName(zipCode):
     def safeListdir(path):
         try:
             logger.debug('Listing contents of %s', path)
-            return os.listdir(path)
+            return fs.listdir(path)
         except:
             logger.exception('Failed to list directory contents')
             return []
 
     ###
     omfDir = os.path.dirname(os.path.abspath(__file__))
-    path = pJoin(omfDir, "data", "Climate")
+    path = pJoin("data", "Climate")
     zipCodeStr = str(zipCode)
     climateNames = [x[:-5] for x in safeListdir(path)]
     climateCity = []
@@ -995,7 +995,7 @@ def _tests():
     assert None == makeClimateCsv(
         "2010-07-01", "2010-08-01", "IAD", pJoin(tempfile.mkdtemp(), "weatherDCA.csv"), cleanup=True)
     print "Testing the zip code to climate name conversion"
-    assert ('MO-KANSAS_CITY', 30) == zipCodeToClimateName(64735)
+    assert ('MO-KANSAS_CITY', 30) == zipCodeToClimateName(64735, os)
 
 
 if __name__ == "__main__":

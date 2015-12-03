@@ -130,7 +130,7 @@ def heavyProcessing(modelDir, inputDict, fs):
     fs.export_from_fs_to_local(pJoin("data", "Feeder", feederDir, feederName + ".json"),
                 pJoin(modelDir, "feeder.json"))
     inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
-        inputDict["zipCode"])
+        inputDict["zipCode"], fs)
     fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                 pJoin(modelDir, "gldContainer", "climate.tmy2"))
     try:

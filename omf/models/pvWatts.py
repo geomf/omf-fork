@@ -58,7 +58,7 @@ def run(modelDir, inputDict, fs):
             json.dump(inputDict, inputFile, indent=4)
         # Copy spcific climate data into model directory
         inputDict["climateName"], latforpvwatts = zipCodeToClimateName(
-            inputDict["zipCode"])
+            inputDict["zipCode"], fs)
         fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                     pJoin(modelDir, "climate.tmy2"))
         # Ready to run
