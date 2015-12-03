@@ -95,6 +95,7 @@ def run(modelDir, inputDict, fs):
     # renderTemplate()
     with open(pJoin(modelDir, "allInputData.json"), "w") as inputFile:
         json.dump(inputDict, inputFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     # If we are re-running, remove output:
     try:
         os.remove(pJoin(modelDir, "allOutputData.json"))

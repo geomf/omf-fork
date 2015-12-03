@@ -359,10 +359,13 @@ def showModel(owner, modelName):
     user = persistence.getUser(current_user_name())
     if owner == current_user_name() or user.role == Role.ADMIN.value or owner == Role.PUBLIC.value:
         modelDir = "data/Model/" + owner + "/" + modelName
-        with fs.open(modelDir + "/allInputData.json") as inJson:
-            modelType = json.load(inJson).get("modelType", "")
-        thisModel = getattr(models, modelType)
-        return thisModel.renderTemplate(thisModel.template, fs, modelDir, False, getDataNames())
+        try:
+            with fs.open(modelDir + "/allInputData.json") as inJson:
+                modelType = json.load(inJson).get("modelType", "")
+                thisModel = getattr(models, modelType)
+                return thisModel.renderTemplate(thisModel.template, fs, modelDir, False, getDataNames())
+        except:
+            return redirect("/")
     else:
         return redirect("/")
 
