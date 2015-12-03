@@ -21,4 +21,4 @@ class TriplexMeter(BaseNode):
 
 
 class Node(BaseNode):
-    tag_names = ["phases", "nominal_voltage"]
+    tag_names = ["phases", "nominal_voltage", "bustype"]

@@ -76,7 +76,10 @@ class Localfs(object):
         directory = os.path.split(target)[0]
         if not os.path.isdir(directory):
             os.makedirs(directory)
-        shutil.copytree(pJoin(_omfDir, source), pJoin(_omfDir, target))
+        if not os.path.isdir(pJoin(_omfDir, source)):
+            shutil.copy2(pJoin(_omfDir, source), pJoin(_omfDir, target))
+        else:
+            shutil.copytree(pJoin(_omfDir, source), pJoin(_omfDir, target))
 
     def import_files_to_hdfs(self, local_directory, hdfs_directory):
         return False
