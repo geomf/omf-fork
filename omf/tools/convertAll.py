@@ -13,10 +13,7 @@
 
 from os import listdir
 from os.path import join
-
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine
-
 from omf.tools.Converter.BaseElements.DB import set_db
 
 db = declarative_base()

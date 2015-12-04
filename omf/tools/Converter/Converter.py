@@ -13,6 +13,8 @@
 
 import json
 import logging
+import requests
+import urlparse
 from os.path import basename
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -27,6 +29,7 @@ from omf.tools.Converter.Elements import *
 import omf.filesystem
 
 class Converter(object):
+    ros_server = 'http://ros.hutchpcn15.infra-host.com'
     fs = omf.filesystem.Filesystem().fs
     read_type = {
                      "triplex_meter": NodeElements.TriplexMeter,
@@ -130,6 +133,8 @@ class Converter(object):
             session.commit()
         else:
             logging.warning("No edge or node can be added to Feeder: {}, conversion failed".format(feeder.name))
+
+        requests.get(urlparse.urljoin(Converter.ros_server, '/api/0.6/rerender?feeder_id=' + str(feeder.id)))
 
     @staticmethod
     def deconvert(feeder_id, db_address):
