@@ -21,7 +21,7 @@ class Feeder(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String)
-    config = Column(postgres.ARRAY(String))
+    config = Column(postgres.JSON)
     lat = Column(Integer)
     lon = Column(Integer)
 

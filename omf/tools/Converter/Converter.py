@@ -68,7 +68,7 @@ class Converter(object):
         with Converter.fs.open(feeder_path) as data_file:
             data = json.load(data_file)
 
-        configList = []
+        configList = {}
         nodesList = {}
         firstElementList = {}
         secondElementList = {}
@@ -88,10 +88,10 @@ class Converter(object):
         for key, element in data["tree"].iteritems():
             if "object" not in element:
                 logging.debug("Object without a type - {}, saving to feeder config".format(element))
-                configList.append(str(Converter.byteify(element)))
+                configList[key] = Converter.byteify(element)
                 continue
             if element["object"] in Converter.feeder_config_types:
-                configList.append(str(Converter.byteify(element)))
+                configList[key] = Converter.byteify(element)
                 continue
             if element["object"] not in Converter.read_type:
                 logging.warning("not yet supported object type - {}".format(element["object"]))
@@ -146,13 +146,8 @@ class Converter(object):
 
         tree = {}
 
-        #TODO: Get feeder config and save in json
-        """
-        i = 0
-        for config in feeder.config:
-            tree[str(i)] = json.loads(config)
-            i += 1
-        """
+        for key, config in feeder.config.iteritems():
+            tree[key] = config
 
         nodes_list = session.query(BaseNode).filter(BaseNode.feeder_id == feeder_id).all()
         edge_list = session.query(Edge).filter(Edge.feeder_id == feeder_id).all()
