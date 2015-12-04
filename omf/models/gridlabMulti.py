@@ -307,6 +307,7 @@ def runForeground(modelDir, inputDict, fs):
         datetime.timedelta(seconds=int((finishTime - beginTime).total_seconds())))
     with open(pJoin(modelDir, "allInputData.json"), "w") as inFile:
         json.dump(inputDict, inFile, indent=4)
+    fs.save(pJoin(modelDir, "allInputData.json"), json.dumps(inputDict, indent=4))
     # Integrate data into allOutputData.json, if error happens, cancel it
     try:
         output = {}
