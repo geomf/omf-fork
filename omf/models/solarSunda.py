@@ -83,7 +83,7 @@ def run(modelDir, inputDict, fs):
             manualTilt = float(inputDict.get("tilt", 0))
         numberInverters = math.ceil(inverterSizeAC / 1000 / 0.5)
         # Copy specific climate data into model directory
-        shutil.copy(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
+        fs.export_from_fs_to_local(pJoin("data", "Climate", inputDict["climateName"] + ".tmy2"),
                     pJoin(modelDir, "climate.tmy2"))
         # Ready to run
         startTime = dt.datetime.now()

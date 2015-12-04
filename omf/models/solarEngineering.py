@@ -50,11 +50,11 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
         inJson["modelName"] = modelName
         inJson["user"] = user
         allInputData = json.dumps(inJson)
-    except IOError:
+    except (IOError, HdfsFileNotFoundException):
         allInputData = None
     try:
         allOutputData = fs.open(pJoin(modelDir, "allOutputData.json")).read()
-    except HdfsFileNotFoundException:
+    except (HdfsFileNotFoundException, IOError):
         allOutputData = None
     if absolutePaths:
         # Parent of current folder.
@@ -63,7 +63,7 @@ def renderTemplate(template, fs, modelDir="", absolutePaths=False, datastoreName
         pathPrefix = ""
     try:
         inputDict = json.load(fs.open(pJoin(modelDir, "allInputData.json")))
-    except HdfsFileNotFoundException:
+    except (IOError, HdfsFileNotFoundException):
         pass
     return template.render(allInputData=allInputData,
                            allOutputData=allOutputData, modelStatus=getStatus(modelDir, fs), pathPrefix=pathPrefix,
@@ -88,7 +88,7 @@ def run(modelDir, inputDict, fs):
         pass
     # Start background process.
     backProc = multiprocessing.Process(
-        target=heavyProcessing, args=(modelDir, inputDict,))
+        target=heavyProcessing, args=(modelDir, inputDict, fs))
     backProc.start()
     print "SENT TO BACKGROUND", modelDir
     fs.save(pJoin(modelDir, "PPID.txt"), str(backProc.pid))
@@ -135,7 +135,7 @@ def heavyProcessing(modelDir, inputDict, fs):
                 pJoin(modelDir, "gldContainer", "climate.tmy2"))
     try:
         startTime = datetime.datetime.now()
-        feederJson = json.load(fs.open(pJoin(modelDir, "feeder.json")))
+        feederJson = json.load(open(pJoin(modelDir, "feeder.json")))
         tree = feederJson["tree"]
         # Set up GLM with correct time and recorders:
         feeder.attachRecorders(tree, "Regulator", "object", "regulator")
