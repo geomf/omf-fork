@@ -640,10 +640,11 @@ def saveFeeder(owner, feederName):
 @app.route("/saveFeederGeo/<feederId>", methods=["POST"])
 @flask_login.login_required
 def saveFeederFromGeoData(feederId):
+    user_name = current_user_name()
     logger.info("Saving feeder: {} to json".format(feederId))
     feeder_data = Converter.deconvert(feederId, the_config.POSTGIS_DB_URI)
     logger.info("Saving feeder: {} to filesystem".format(feeder_data[0]))
-    fs.save("data/Feeder/admin/" + feeder_data[0], json.dumps(feeder_data[1]))
+    fs.save("data/Feeder/" + user_name + "/" + feeder_data[0], json.dumps(feeder_data[1]))
     return "Success"
 
 
