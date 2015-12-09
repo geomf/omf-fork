@@ -92,8 +92,7 @@ def getDataNames():
         currUser = "public"
     feeders = [x[:-5] for x in safeListdir("data/Feeder/" + currUser)]
     publicFeeders = [x[:-5] for x in safeListdir("data/Feeder/public/")]
-    climates = [x[:-5] for x in safeListdir("./data/Climate/")]
-    return {"feeders": sorted(feeders), "publicFeeders": sorted(publicFeeders), "climates": sorted(climates),
+    return {"feeders": sorted(feeders), "publicFeeders": sorted(publicFeeders),
             "currentUser": currUser}
 
 

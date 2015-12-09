@@ -12,7 +12,7 @@ from jinja2 import Template
 from matplotlib import pyplot as plt
 from os.path import join as pJoin
 import __metaModel__
-from __metaModel__ import renderAndShow, getStatus as getStatusMeta
+from __metaModel__ import renderAndShow, getStatus as getStatusMeta, cancel
 import logging
 # OMF imports
 import omf.feeder
@@ -472,8 +472,8 @@ def runForeground(modelDir, inputDict, fs):
         print "DONE RUNNING", modelDir
     except Exception as e:
         print "Oops, Model Crashed!!!"
-        # cancel(modelDir)
         print e
+        cancel(modelDir)
 
 
 def _tests():
