@@ -18,6 +18,7 @@ from omf.common.userRole import Role
 from flask_login import UserMixin
 
 class User(db.Model, UserMixin):
+    __tablename__ = "users"
     username = db.Column(db.String(80), primary_key=True)
     reg_key = db.Column(db.String(80), nullable =True)
     timestamp = db.Column(db.TIMESTAMP(timezone=True), nullable =True)

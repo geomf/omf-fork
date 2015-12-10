@@ -45,7 +45,6 @@ class Dp2Config(Config):
         self.vcap_services =  json.loads(os.environ['VCAP_SERVICES'])
         self.vcap_application =  json.loads(os.environ['VCAP_APPLICATION'])
         self.APPLICATION_URL = 'http://' + self.vcap_application['application_uris'][0]
-        self.POSTGIS_DB_URI = os.environ['POSTGIS_DB_URI']
         redis_session_service = self.__get_service_configuration('redis28', self.SESSION_SERVICE_NAME)
         redis_session_credentials = redis_session_service['credentials']
         redis_session = redis.Redis(host=redis_session_credentials['hostname'], port=redis_session_credentials['port'],
@@ -62,9 +61,10 @@ class Dp2Config(Config):
 
         self.SENDER_EMAIL = os.environ['SENDER_EMAIL']
 
-        user_database_service = self.__get_service_configuration('postgresql93', self.USER_DATABASE_SERVICE_NAME)
+        user_database_service = self.__get_service_configuration('user-provided', self.USER_DATABASE_SERVICE_NAME)
         user_database_credentials = user_database_service['credentials']
         self.SQLALCHEMY_DATABASE_URI = user_database_credentials['uri']
+        self.POSTGIS_DB_URI = user_database_credentials['uri']
 
     def __get_service_configuration(self, service_type, service_name):
         service = next((service for service in self.vcap_services[service_type]
@@ -83,7 +83,7 @@ class ProductionConfig(Dp2Config):
 
     SMTP_SERVICE_NAME = 'omf_smtp_service'
     SESSION_SERVICE_NAME = 'omf_redis_session_database'
-    USER_DATABASE_SERVICE_NAME = 'omf_postgres_user_database'
+    USER_DATABASE_SERVICE_NAME = 'ros-service'
     PERMANENT_SESSION_LIFETIME = 21600
 
 

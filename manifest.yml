@@ -32,6 +32,6 @@ services:
 - omf_redis_session_database
 # to create this service use: cf cs smtp shared omf_smtp_service
 - omf_smtp_service
-# to create this service use: cf cs postgresql93 free omf_postgres_user_database
-- omf_postgres_user_database
+# to create this service use: cf cs hdfs free hdfs-instance
 - hdfs-instance
+- ros-service

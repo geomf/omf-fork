@@ -44,9 +44,9 @@ def populate_database():
     from omf.web import persistence
     admin = User(username='admin', registered=True, password_digest=User.hash_password('admin'), role=Role.ADMIN.value)
     test = User(username='test', registered=True, password_digest=User.hash_password('test'))
-
     persistence.addUser(admin)
     persistence.addUser(test)
+    logger.info('User database populated.')
 
 
 if __name__ == '__main__':
