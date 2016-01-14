@@ -1,0 +1,13 @@
+Thumbs.db
+*.pyc
+*.sublime-project
+*.sublime-workspace
+S3KEY.*
+build
+omf.egg-info
+omf/emailCredentials.key
+**/.DS_Store
+omf/scratch/
+setup.py
+cloudDeploy.sh
+dp2_scripts/

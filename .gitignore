@@ -2,6 +2,7 @@ Thumbs.db
 *.pyc
 *.sublime-project
 *.sublime-workspace
+.idea/
 omf/data/Model/*
 omf/data/Feeder/*
 omf/data/User/*
@@ -15,3 +16,4 @@ omf/emailCredentials.key
 !omf/data/Feeder/public/*
 !omf/data/User/test.json
 !omf/data/User/public.json
+vendor/

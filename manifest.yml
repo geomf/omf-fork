@@ -1,0 +1,35 @@
+#
+# Open Modeling Framework (OMF) Software for simulating power systems behavior
+# Copyright (c) 2015, Intel Corporation.
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms and conditions of the GNU General Public License,
+# version 2, as published by the Free Software Foundation.
+#
+# This program is distributed in the hope it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+---
+applications:
+- name: omf
+  memory: 2GB
+  disk_quota: 4GB
+  instances: 1
+  buildpack: python-apt-buildpack-noncached
+  env:
+    FORCE_HTTPS: 0
+    BUILDPACK_DEBUG: 0
+    ODBCINI: $HOME/config/odbc.ini
+    ODBCSYSINI: $HOME/config
+    OMF_ENVIRONMENT: PROD
+    LOG_LEVEL: INFO
+    SENDER_EMAIL: admin@hutchpcn15.intel.com
+services:
+# to create this service use: cf cs redis28 free omf_redis_session_database
+- omf_redis_session_database
+# to create this service use: cf cs smtp shared omf_smtp_service
+- omf_smtp_service
+# to create this service use: cf cs postgresql93 free omf_postgres_user_database
+- omf_postgres_user_database

@@ -1,4 +1,5 @@
-﻿<head>
+﻿<!-- Portions Copyright (C) 2015 Intel Corporation -->
+<head>
 	<script type="text/javascript">
 		var unsavedChanges = false;
 	</script>	
@@ -8,9 +9,12 @@
 	<link rel="stylesheet" href="/static/omf.css" />
 	<link rel="shortcut icon" href="/static/favicon.ico" />
 	<link rel="stylesheet" type="text/css" href="/static/gridEdit.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/footer.css"/>
 
 </head>
 <body onkeypress='hotkeys()' onload="showProgressDialog('Rendering feeder.')">
+<div id="container">
+<div id="cont">
 <div id='title'>
 	<div id='logoBox'><a href='/'>&#10059;</a></div>
 	<p>Grid Editor: </p>
@@ -166,7 +170,9 @@
 			</table>
 		</div>
 	</div>
+
 </div>
+
 
 
 <script type="text/javascript">
@@ -197,12 +203,14 @@ var xScale = 1, yScale = 1;
 var width = window.screen.availWidth-45;
 var height = window.screen.availHeight-100;
 
+var availableHeight = window.innerHeight - 65;
+
 // CREATE LAYOUT
-var body = d3.select('body')
+var body = d3.select('#cont')
 	.append('svg:svg')
 	.attr('id', 'graphSvg')
 	.on('click', onSvgBlankCanvasClick)
-	.attr('viewBox', '0 0 ' + window.innerWidth + ' ' + window.innerHeight)
+	.attr('viewBox', '0 0 ' + window.innerWidth + ' ' + availableHeight)
 	.attr("preserveAspectRatio", "xMinYMin meet")
 	.call(zoomer.on('zoom', zoomRedraw));
 
@@ -441,8 +449,10 @@ function draw() {
 	var name2nodeIndex = {}
 	if (nodes.length == 0) {
 		// Go through the first time and set up the nodes with indices:
+        console.log("Setting up nodes with indices")
 		for (x in tree) {
 			if ((tree[x].name != undefined || tree[x].module != undefined) && tree[x].from == undefined) {
+                // Adding node - tree[x].name
 				nodeName = tree[x].name
 				nodeObject = (tree[x].object == "node") ? "gridNode" : tree[x].object
 				isfixed = (tree[x].latitude != undefined && tree[x].longitude != undefined) ? true : false
@@ -463,10 +473,20 @@ function draw() {
 			}
 		}
 
+		console.log("Setting up links between nodes")
 		// Go through a second time and set up the links:
 		for (x in tree) {
 			if (tree[x].name != undefined) {
 				if (tree[x].from != undefined && tree[x].to != undefined) {
+                    // Adding link beetwen tree[x].from and tree[x].to
+					if(name2nodeIndex[tree[x].from] == undefined){
+                        console.log("WARN - Undefined node: %s", tree[x].from)
+                        continue
+                    }
+                    if(name2nodeIndex[tree[x].to] == undefined){
+                        console.log("WARN - Undefined node: %s", tree[x].to)
+                        continue
+                    }
 					name2nodeIndex[tree[x].name] = links.length
 					links.push({
 						source: name2nodeIndex[tree[x].from],
@@ -483,6 +503,7 @@ function draw() {
 				}
 			}
 		}
+        console.log("Finished setting up")
 	}
 	// This makes a fancy fade-in.
 	vis.style('opacity', 1e-6)
@@ -2171,4 +2192,8 @@ window.onbeforeunload = function(e) {
 };
 
 </script>
+
+{% include "footer.html" %}
+</div>
+
 </body>

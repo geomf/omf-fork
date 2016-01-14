@@ -1,3 +1,4 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<title>Open Modeling Framework</title>
 	<meta charset='utf-8'>
@@ -24,6 +25,8 @@
 		.Error{color:red;display:none;}
 		.fdiv{display:none;margin-top:0px;margin-left:75px;width:70%;}
 		.quickNewSelector{display:none;}
+        #footer { height: 60px; position: absolute; bottom: 10; text-align: center; font-size: x-small; width: 99%;}
+        #footerContent { position: relative; margin: auto; width: 1024px;}
 	</style>
 	<link rel='shortcut icon' href='/static/favicon.ico'>
 	<script type='text/javascript' src='/static/jquery-1.9.1.js'></script>
@@ -78,7 +81,7 @@
 	</script>
 </head>
 <body>
-	<div id='pusherRobot'></div>
+    <div id='pusherRobot'></div>
 	<div id='container'>
 		<div class='subContainer' id='advertisingFrame'>
 			<div id='subLinks'>
@@ -108,20 +111,23 @@
 			</div>
 			<p class="Error">That email is not associated with any account</p>
 			<p class="Success">Email successfully sent! The reset link will expire in 24 hours</p>
-			<a class='quickNew' href="#" id="quickNewShow">Want Guest Access?</a>	
+			<a class='quickNew' href="#" id="quickNewShow">Want Guest Access?</a>
 			<div class="quickNewSelector">
 				<form name="quickNewOptions">
 					<p>Select a model to explore
 				    <select name="model" onChange="document.location.href=document.quickNewOptions.model.options[document.quickNewOptions.model.selectedIndex].value">
-				    	<option value="">Please select a model:</option> 
+				    	<option value="">Please select a model:</option>
 				    	{% for modelName in modelNames %}
 				    		<option value="/quickNew/{{ modelName }}">{{ modelName }}</option>
 				    	{% endfor %}
 			    	</select>
 			    	</p>
-				</form>     	
-				<a href="#" id="quickNewcancel">Cancel</a>	
+				</form>
+				<a href="#" id="quickNewcancel">Cancel</a>
 			</div>
 		</div>
 	</div>
+
+{% include "footer.html" %}
+
 </body>

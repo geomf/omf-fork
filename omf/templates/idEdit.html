@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script type="text/javascript" src="/static/omf.js"></script>
+	<script type="text/javascript" src="/static/jquery-1.9.1.js"></script>
+	<link rel="stylesheet" href="/static/omf.css" />
+	<link rel="shortcut icon" href="/static/favicon.ico" />
+	<link rel="stylesheet" type="text/css" href="/static/gridEdit.css"/>
+    <link rel="stylesheet" type="text/css" href="/static/footer.css"/>
+</head>
+<body>
+    <div id="container">
+        <div id="cont">
+            <div id='title' style="margin-bottom: 1px; position: absolute">
+                <div id='logoBox'><a href='/'>&#10059;</a></div>
+                <p>Grid Editor: </p>
+                <p id='gridName'>{{feederName}}</p>
+            </div>
+            <div>
+                <iframe style="min-height: 850px; width: 100%; margin-top: 60px;" src="/id#background=custom:http://52.30.29.154/osm_tiles/{z}/{x}/{y}.png&map=16.07/-92.30491/38.93961"></iframe>
+            </div>
+
+        </div>
+        {% include "footer.html" %}
+    </div>
+
+</body>
+</html>

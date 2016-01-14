@@ -1,8 +1,10 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<style>
 		.success{color:green;display:none;}
 		.error{color:red;display:none;}
 	</style>
+    <link rel='stylesheet' href='/static/footer.css'/>
 	<script src="/static/jquery-1.9.1.js"></script>
 	<script>
 	$(function(){
@@ -39,19 +41,26 @@
 	</script>
 <head>
 <body>
-	<h1>{{ user.username }}</h1>
-	<h2>Change Password</h2>
-	<p id="Success" class="success">Your password has been changed!</p>
-	<form class="submitty">
-		<input type="password" name="old_pwd" placeholder="Old Password">
-		<span id="not_auth"  class="error">Your old password is not correct</span>
-		<br />
-		<input  type="password" name="new_pwd" placeholder="New Password" />
-		<span id="not_match" class="error">Your new passwords do not match</span>
-		<br>
-		<input type="password" name="conf_pwd" placeholder="Confirm New Password" />
-		<br>
-		<input class="submitty" type="submit" value="Submit">
-	</form>
-	<a href="/">Home</a>
+<div id="container">
+    <div id="cont">
+        <h1>{{ user.username }}</h1>
+        <h2>Change Password</h2>
+        <p id="Success" class="success">Your password has been changed!</p>
+        <form class="submitty">
+            <input type="password" name="old_pwd" placeholder="Old Password">
+            <span id="not_auth"  class="error">Your old password is not correct</span>
+            <br />
+            <input  type="password" name="new_pwd" placeholder="New Password" />
+            <span id="not_match" class="error">Your new passwords do not match</span>
+            <br>
+            <input type="password" name="conf_pwd" placeholder="Confirm New Password" />
+            <br>
+            <input class="submitty" type="submit" value="Submit">
+        </form>
+        <a href="/">Home</a>
+    </div>
+
+{% include "footer.html" %}
+
+</div>
 </body>

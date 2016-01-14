@@ -1,14 +1,18 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<title>Open Modeling Framework</title>
 	<meta charset="utf-8">
 	<link href="{{pathPrefix}}/static/omf.css" type="text/css" rel="stylesheet"/>
+    <link rel='stylesheet' href='/static/footer.css'/>
 	<link rel="shortcut icon" href="{{pathPrefix}}/static/favicon.ico">
 	<link href="{{pathPrefix}}/static/models.css" type="text/css" rel="stylesheet"/>
+	<link type="text/css" href="{{ pathPrefix }}/static/c3.css" rel="stylesheet"/>
 	{% if modelStatus == "running" %}<meta http-equiv="refresh" content="5"/>{% endif %}
 	<!-- Library Imports -->
 	<script type="text/javascript" src="{{pathPrefix}}/static/omf.js"></script>
 	<script type="text/javascript" src="{{pathPrefix}}/static/jquery-1.9.1.js"></script>
-	<script src="{{pathPrefix}}/static/highcharts4.src.js"></script>
+	<script src="{{ pathPrefix }}/static/d3.v3.js"></script>
+    <script src="{{ pathPrefix }}/static/c3.js"></script>
 	<!-- Global Funcs Import -->
 	<script type="text/javascript" src="{{pathPrefix}}/static/models.js"></script>
 	<!-- Data  Imports -->
@@ -20,6 +24,9 @@
 <style type="text/css">
 </style>
 <body onload="init()">
+<div id="container">
+<div id="cont">
+
 	<div id="title">
 		<div id="logoBox"><a href="/">&#10059;</a></div>
 		<p id="titleText">New Static CVR Model</p>
@@ -180,75 +187,9 @@
 		Model cancelled or encountered an error. Please change inputs and re-run.
 	</div>
 	<div id="output">
-		<script type="text/javascript">
-		function insertMetric(tableId, name, vector) {
-				// Add a vector to a table as a row.
-				table = gebi(tableId)
-				newRow = table.insertRow()
-				newRow.insertCell().innerHTML = name
-				for (i=0; i<vector.length; i++) {
-					cell = newRow.insertCell()
-					cell.innerHTML = vector[i]
-				}
-			}
-		</script>
+
 		<p class="reportTitle postRun">Historical Loads</p>
 		<div id="scadaReport" class="tightContent postRun">
-			<script type="text/javascript">
-				new Highcharts.Chart({
-					"chart":{
-						"height": 200,
-						"width": 1000,
-						"renderTo": "scadaReport",
-						"type": "column"
-					},
-					"title":{
-						"text":null
-					},
-					"legend":{
-						"layout":"horizontal", 
-						"align":"top", 
-						"verticalAlign":"top", 
-						"x":50, 
-						"y":-10, 
-						"borderWidth":0
-					},
-					"credits":{
-						"enabled":false
-					},
-					"tooltip":{
-						"valueDecimals":1
-					},
-					"xAxis": {
-						"categories": allOutputData["monthName"]
-					},
-					"yAxis": {
-						"title": {
-							"text": "Historical Power Con(KW)",
-							"style":{
-								"color":"gray"
-							}
-						}
-					},
-					"plotOptions": {
-						"column": {
-							"pointPadding": 0.2,
-							"borderWidth": 0
-						}
-					},
-					"series":[{
-						"data": allOutputData["histPeak"],
-						"type": "column",
-						"color": "darkgrey",
-						"name": "histPeak"
-					},{
-						"data": allOutputData["histAverage"],
-						"type": "column",
-						"color": "grey",
-						"name": "histAverage"
-					}]
-				})
-			</script>
 		</div>
 		<p class="reportTitle postRun">One Line Diagram</p>
 		<div id="feederReport" class="tightContent postRun">
@@ -257,140 +198,25 @@
 		</div>
 		<p class="reportTitle postRun">Projected Savings by Month</p>
 		<div id="spendReport" class="tightContent postRun">
-			<script type="text/javascript">
-				new Highcharts.Chart({
-					"chart":{
-						"height": 200,
-						"width": 1000,
-						"renderTo": "spendReport",
-						"type": "column"
-					},
-					"title":{
-						"text":null
-					},
-					"legend":{
-						"layout":"horizontal", 
-						"align":"top", 
-						"verticalAlign":"top", 
-						"x":50, 
-						"y":-10, 
-						"borderWidth":0
-					},
-					"credits":{
-						"enabled":false
-					},
-					"tooltip":{
-						"valueDecimals":1
-					},
-					"xAxis": {
-						"categories": allOutputData["monthName"]
-					},
-					"yAxis": {
-						"title": {
-							"text": "Utility Savings ($)",
-							"style":{
-								"color":"gray"
-							}
-						}
-					},
-					"plotOptions": {
-						"column": {
-							"pointPadding": 0.2,
-							"borderWidth": 0
-						}
-					},
-					"series":[{
-						"data": allOutputData["energyReductionDollars"],
-						"type": "column",
-						"color": "blue",
-						"name": "Energy Reduction"
-					},{
-						"data": allOutputData["lossReductionDollars"],
-						"type": "column",
-						"color": "green",
-						"name": "Loss Reduction"
-					},{
-						"data": allOutputData["peakReductionDollars"],
-						"type": "column",
-						"color": "red",
-						"name": "Peak Reduction"
-					}]
-				})
-			</script>
 		</div>
 		<p class="reportTitle postRun">Projected Avoided Cost</p>
 		<div id="savingsReport" class="tightContent postRun">
-			<script type="text/javascript">
-				paybackYear = null
-				for (i=0; i<=30; i++) {
-					if (allOutputData["annualSave"][i]>=0) {paybackYear = i; break}
-				}
-				paybackLine = []
-				if (paybackYear != null) {
-					paybackLine = [{
-						"color": "green", // Color value
-						"value": paybackYear, // Value of where the line will appear
-						"width": 1, // Width of the line    
-						"label": {"text": "Simple Payback"}
-					}]
-				}
-				new Highcharts.Chart({
-					"chart":{
-						"height": 200,
-						"width": 1000,
-						"renderTo": "savingsReport",
-						"type": "line"
-					},
-					"title":{
-						"text":null
-					},
-					"legend":false,
-					"credits":{
-						"enabled":false
-					},
-					"tooltip":{
-						"valuePrefix":"$",
-						"valueDecimals":1,
-						formatter: function () {return 'Net return after <b>' + this.x + '</b> years is <b>$' + this.y.toFixed(2) + '</b>'}
-					},
-					"xAxis": {
-						"plotLines": paybackLine
-					},
-					"yAxis": {
-						"title": {
-							"text": "Cumulative Savings ($)",
-							"style":{
-								"color":"gray"
-							}
-						}
-					},
-					"plotOptions": {
-					},
-					"series":[{
-						"data": allOutputData["annualSave"],
-						"color": "blue",
-						"name": "Cumulative Savings ($)"
-					}]
-				})
-			</script>
 		</div>
 		<p class="reportTitle postRun">Power Flows at Various Loads</p>
 		<div id="powerflowReport" class="tightContent postRun tableReport">
 			<table id="powerflowReportTable"></table>
-			<script type="text/javascript">
-				for (row in allOutputData["monthDataMat"]){
-					insertMetric("powerflowReportTable","", allOutputData["monthDataMat"][row])
-				}
-			</script>	
 		</div>
 		<p class="reportTitle postRun">Savings at Various Loads</p>
 		<div id="moneyReport" class="tightContent postRun tableReport">
 			<table id="moneyReportTable"></table>
-			<script type="text/javascript">
-				for (row in allOutputData["monthDataPart"]){
-					insertMetric("moneyReportTable","", allOutputData["monthDataPart"][row])
-				}
-			</script>
 		</div>
 	</div>
+		<script src="{{ pathPrefix }}/static/models/chart/chart.js"></script>
+        <script src="{{ pathPrefix }}/static/models/chart/lineChart.js"></script>
+		<script src="{{ pathPrefix }}/static/models/chart/barChart.js"></script>
+        <script src="{{ pathPrefix }}/static/models/cvrStatic/cvrStatic.js"></script>
+</div>
+{{ footer }}
+</div>
+
 </body>

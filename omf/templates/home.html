@@ -1,8 +1,10 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<title>Open Modeling Framework</title>
 	<meta charset='utf-8'>
 	<meta name='Description' content='The Open Modeling Framework for smart grid cost-benefit analysis.'>
-	<link rel='stylesheet' href='/static/omf.css'/> 
+	<link rel='stylesheet' href='/static/omf.css'/>
+    <link rel='stylesheet' href='/static/footer.css'/>
 	<link rel='shortcut icon' href='/static/favicon.ico'>
 	<style>
 		div#toolbar {padding: 0px; height:40px;	line-height:40px; position:fixed; top:65px;	z-index:1;} /*over-riding some toolbar defaults so tabs look good.*/
@@ -51,6 +53,8 @@
 	</script>
 </head>
 <body>
+<div id="container">
+<div id="cont">
 	<div id='title'>
 		<div id='logoBox'><a href='/'>&#10059;</a></div>
 		<!--Title:-->Open Modeling Framework
@@ -125,6 +129,14 @@
 						<td>{{ feeder.editDate }}</td>
 					</tr>
 					{% endfor %}
+
+                    <tr>
+                        <td>public</td>
+                        <td><a href="./feeder/geo/public/Test iD visualisation">Test iD visualisation</a></td>
+                        <td>Ready</td>
+                        <td>2015-10-15 12:15:25</td>
+                    </tr>
+
 				</tbody>
 			</table>
 		</div>
@@ -213,6 +225,13 @@
 			</form>
 		</div>				
 	</div>
+</div>
+
+{% include "footer.html" %}
+
+</div>
+
+
 <script>
 	if (window.location.hash=='#feeders') {gebi('feedersTab').click()}
 </script>

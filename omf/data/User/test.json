@@ -1,1 +1,9 @@
-{"username": "test", "password_digest": "$pbkdf2-sha512$12000$s7ZWag0hBIAwxrh3DkFICQ$8an4Xu2rg/35o.XcDFSm2scwEKAfYsOs4QTNwEeWaUbwgZMpUWA46ubft37E0ZoiJCv8Ypf0QncjpLBuhAmwhg"}
+{
+    "username": "test", 
+    "reg_key": null, 
+    "timestamp": "Mon Aug 24 09:24:05 2015",
+    "registered": true, 
+    "csrf": null, 
+    "password_digest": "$pbkdf2-sha512$19000$FEIIAYAwBuDcWysFQIgxZg$fEXPqXtRgD/Ngk6ZiQCzREn00CE3pLLIUXgwbb7YrprOnhlppksTZT0fpBtmxn7ys3QrGt11note4ucctDk8NQ",
+    "role": "user"
+}

@@ -1,9 +1,11 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<title>Open Modeling Framework</title>
 	<meta charset="utf-8">
 	<link href="{{pathPrefix}}/static/omf.css" type="text/css" rel="stylesheet"/>
 	<link rel="shortcut icon" href="{{pathPrefix}}/static/favicon.ico">
 	<link href="{{pathPrefix}}/static/models.css" type="text/css" rel="stylesheet"/>
+    <link rel='stylesheet' href='/static/footer.css'/>
 	{% if modelStatus == "running" %}<meta http-equiv="refresh" content="5"/>{% endif %}
 	<!-- Library Imports -->
 	<script type="text/javascript" src="{{pathPrefix}}/static/omf.js"></script>
@@ -17,6 +19,8 @@
 	<script>currentUser="{{datastoreNames.get('currentUser','test')}}"</script>
 </head>
 <body onload="init()">
+<div id="container">
+    <div id="cont">
 	<div id="title">
 		<div id="logoBox"><a href="/">&#10059;</a></div>
 		<p id="titleText">New Voltage Drop Model</p>
@@ -87,4 +91,7 @@
 			<script type="text/javascript">gebi("voltageDropChart").src = "data:image/png;base64," + allOutputData.voltageDrop</script>
 		</div>
 	</div>
+</div>
+{{ footer }}
+</div>
 </body>

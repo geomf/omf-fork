@@ -1,0 +1,22 @@
+--- /usr/bin/gridlabd	2014-10-01 02:04:09.000000000 +0200
++++ ./gridlabd_package/usr/bin/gridlabd	2015-07-07 11:35:41.503451726 +0200
+@@ -421,14 +421,13 @@
+ }
+ 
+ 
+-
+-prefix="/usr"
+-exec_prefix="/usr"
+-bindir="/usr/bin"
++prefix=$(dirname $(cd $(dirname $0); pwd))
++exec_prefix="$prefix"
++bindir=${prefix}/bin
+ datarootdir="${prefix}/share"
+-datadir="/usr/share"
++datadir="${prefix}/share"
+ pkgdatadir="$datadir/gridlabd"
+-libdir="/usr/lib64"
++libdir="${prefix}/lib64"
+ pkglibdir="$libdir/gridlabd"
+ 
+ BINPATH=`dirname $0`

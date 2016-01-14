@@ -1,0 +1,3 @@
+[submodule "omf/static/id"]
+	path = omf/static/id
+	url = https://tfs.sclab.intel.com:8080/tfs/ISD_Collection/Hutchison/_git/iD-fork

@@ -1,14 +1,18 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<title>Open Modeling Framework</title>
 	<meta charset="utf-8">
 	<link href="{{pathPrefix}}/static/omf.css" type="text/css" rel="stylesheet"/>
 	<link rel="shortcut icon" href="{{pathPrefix}}/static/favicon.ico">
 	<link href="{{pathPrefix}}/static/models.css" type="text/css" rel="stylesheet"/>
+    <link rel='stylesheet' href='/static/footer.css'/>
+	<link type="text/css" href="{{ pathPrefix }}/static/c3.css" rel="stylesheet"/>
 	{% if modelStatus == "running" %}<meta http-equiv="refresh" content="5"/>{% endif %}
 	<!-- Library Imports -->
 	<script type="text/javascript" src="{{pathPrefix}}/static/omf.js"></script>
 	<script type="text/javascript" src="{{pathPrefix}}/static/jquery-1.9.1.js"></script>
-	<script src="{{pathPrefix}}/static/highcharts4.src.js"></script>
+	<script src="{{ pathPrefix }}/static/d3.v3.js"></script>
+    <script src="{{ pathPrefix }}/static/c3.js"></script>
 	<!-- Global Funcs Import -->
 	<script type="text/javascript" src="{{pathPrefix}}/static/models.js"></script>
 	<!-- Data  Imports -->
@@ -18,6 +22,8 @@
 	<script>currentUser="{{datastoreNames.get('currentUser','test')}}"</script>
 </head>
 <body onload="init()">
+<div id="container">
+<div id="cont">
 	<div id="title">
 		<div id="logoBox"><a href="/">&#10059;</a></div>
 		<p id="titleText">New PVWatts &copy; Model</p>
@@ -146,82 +152,25 @@
 		Model cancelled or encountered an error. Please change inputs and re-run.
 	</div>
 	<div id="output">
-		<script type="text/javascript">
-			// Global Highcharts settings.
-			Highcharts.setOptions({global:{useUTC:true}})
-			// Clean up the non-ISO date strings we get.
-			function dateOb(inStr) {return Date.parse(inStr.replace(/-/g,"/"))}
-			pointStart = dateOb(allOutputData.timeStamps[0])
-			pointInterval = dateOb(allOutputData.timeStamps[1]) - pointStart
-		</script>
 		<p class="reportTitle postRun">System Output</p>
 		<div id="powerGenerationReport" class="tightContent postRun">
 			<div id="powerTimeSeries"></div>
 			<div id="energyBalance"></div>
-			<script>
-				// Handle special case for inverter sizing:
-				if (allInputData.inverterSize == 0) {chartInverter = allInputData.systemSize}
-				else {chartInverter = allInputData.inverterSize}
-				powerSeries = [{"marker":{"enabled":false},"dataLabels":{"enabled":false}, "color":"red","data":allOutputData.Consumption.Power,"name":"Power Generated"}]
-				new Highcharts.Chart({ "credits":{"enabled":false},
-					"plotOptions":{ "series":{"pointStart":pointStart,"shadow":false,"pointInterval":pointInterval, "animation": false}, "line":{"marker":{"enabled":false}}},
-					"xAxis":{"maxZoom":108000000,"tickColor":"gray","type":"datetime","lineColor":"gray"},
-					"title":{"text":null},
-					"series":powerSeries,
-					"tooltip": false,
-					"yAxis":{"title":{"text":"Power (W-AC)","style":{"color":"gray"}},
-						"min":0,
-						"plotLines":[{"color": "orange",
-							"dashStyle": "ShortDash",
-							"width": 2,
-							"label":{"text":"Panels Nameplate","align":"right","y":12,"x":0},
-							"value": parseFloat(allInputData.systemSize)*1000,"zIndex": 10},
-							{"color": "orange",
-							"dashStyle": "ShortDash",
-							"width": 2,
-							"label":{"text":"Inverter Nameplate","align":"left","y":12,"x":0},
-							"value": parseFloat(chartInverter)*1000,"zIndex": 10} ] },
-					"chart":{"zoomType":"x","marginBottom":35,"width":1000,"height":250,"marginRight":20,"renderTo":"powerTimeSeries","type":"line"},
-					"legend":false } )
-			</script>
 		</div>
 		<p class="reportTitle postRun">Irradiance</p>
 		<div id="irradianceReport" class="tightContent postRun">
 			<div id="irradianceChartDiv"></div>
-			<script>
-				irradianceSeriesData = [
-					{"name":"Plane of Array Irradiance (W/m^2)","marker":{"enabled":false},"color":"yellow","data":allOutputData.climate["Plane of Array Irradiance (W/m^2)"]},
-					{"name":"Beam Normal Irradiance (W/m^2)","marker":{"enabled":false},"color":"gold","data":allOutputData.climate["Beam Normal Irradiance (W/m^2)"]},
-					{"name":"Diffuse Irradiance (W/m^2)","marker":{"enabled":false},"color":"lemonchiffon","data":allOutputData.climate["Diffuse Irradiance (W/m^2)"]} ]
-				new Highcharts.Chart({"credits":{"enabled":false},
-					"plotOptions":{"series":{"animation": false, "pointStart":pointStart,"shadow":false,"pointInterval":pointInterval},"line":{"marker":{"enabled":false}}},
-					"xAxis":{"maxZoom":108000000,"tickColor":"gray","type":"datetime","lineColor":"gray"},
-					"title":{"text":null},
-					"series":irradianceSeriesData,
-					"yAxis":{"title":{"text":"Climate Units","style":{"color":"gray"}}, "min":0},
-					"chart":{"marginBottom":35,"zoomType":"x","renderTo":"irradianceChartDiv","type":"line","marginRight":20, "height":250,"width":1000},
-					"tooltip":false,
-					"legend":{"verticalAlign":"top","align":"top","borderWidth":0,"x":50,"y":-10,"layout":"horizontal"}})
-			</script>
 		</div>
 		<p class="reportTitle postRun">Other Climate Variables</p>
 		<div id="climateReport" class="tightContent postRun">
 			<div id="climateChartDiv"></div>
-			<script>
-				climateSeriesData = [
-					{"name":"Ambient Temperature (F)","marker":{"enabled":false},"color":"dimgray","data":allOutputData.climate["Ambient Temperature (F)"]},
-					{"name":"Cell Temperature (F)","marker":{"enabled":false},"color":"gainsboro","data":allOutputData.climate["Cell Temperature (F)"]},
-					{"name":"Wind Speed (m/s)","marker":{"enabled":false},"color":"darkgray","data":allOutputData.climate["Wind Speed (m/s)"]} ]
-				new Highcharts.Chart({"credits":{"enabled":false},
-					"plotOptions":{"series":{"animation": false, "pointStart":pointStart,"shadow":false,"pointInterval":pointInterval},"line":{"marker":{"enabled":false}}},
-					"xAxis":{"maxZoom":108000000,"tickColor":"gray","type":"datetime","lineColor":"gray"},
-					"title":{"text":null},
-					"series":climateSeriesData,
-					"yAxis":{"title":{"text":"Climate Units","style":{"color":"gray"}}},
-					"chart":{"marginBottom":35,"zoomType":"x","renderTo":"climateChartDiv","type":"line","marginRight":20, "height":250,"width":1000},
-					"tooltip":false,
-					"legend":{"verticalAlign":"top","align":"top","borderWidth":0,"x":50,"y":-10,"layout":"horizontal"}})
-			</script>
 		</div>
 	</div>
+    {{ nrels_text }}
+		<script src="{{ pathPrefix }}/static/models/chart/chart.js"></script>
+        <script src="{{ pathPrefix }}/static/models/chart/lineChart.js"></script>
+        <script src="{{ pathPrefix }}/static/models/pvWatts/pvWatts.js"></script>
+</div>
+{{ footer }}
+</div>
 </body>

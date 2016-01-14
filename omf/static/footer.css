@@ -1,0 +1,54 @@
+/*!
+* Open Modeling Framework (OMF) Software for simulating power systems behavior
+* Copyright (c) 2015, Intel Corporation.
+*
+* This program is free software; you can redistribute it and/or modify it
+* under the terms and conditions of the GNU General Public License,
+* version 2, as published by the Free Software Foundation.
+*
+* This program is distributed in the hope it will be useful, but WITHOUT
+* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+* FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+* more details.
+*/
+
+#container {
+    position: relative;
+    min-height: 100%;
+}
+
+#cont {
+    padding-bottom: 60px;
+}
+
+#footer {
+    height: 60px;
+    position: absolute;
+    bottom: 10px;
+    text-align: center;
+    font-size: x-small;
+    width: 99%;
+}
+
+#footerContent {
+    position: relative;
+    margin: auto;
+    width: 1024px;
+}
+
+hr {
+    display: block;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    margin-left: auto;
+    margin-right: auto;
+    border-style: inset;
+    border-width: 1px;
+}
+
+#nrlsObligation {
+    margin: auto;
+    margin-bottom: 15px;
+    width: 1024px;
+    font-size: x-small;
+}

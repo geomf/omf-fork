@@ -1,3 +1,4 @@
+<!-- Portions Copyright (C) 2015 Intel Corporation -->
 <head>
 	<style>
 	.error{color:red; display:none;}
@@ -8,6 +9,7 @@
 	.emailSent{color:blue;}
 	.emailExpired{color:red;}
 	</style>
+    <link rel='stylesheet' href='/static/footer.css'/>
 	<script type='text/javascript' src='/static/jquery-1.9.1.js'></script>
 	<script>
 		$(function(){
@@ -101,34 +103,39 @@
 		</script>
 </head>
 <body>
-	<h1>Admin Controls</h1>
-	<a href="/">Home</a>
-	<h2>Users</h2>
-	<h3>Create New User!</h3>
-	<form class="new_user">
-	  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
-	  <input type="text" name="email" placeholder="User's Email Address"/>
-	  <span id="alreadyExists" class="error">A user with that email already exists!</span>
-	  <br />
-	  <input type="submit" value="Submit">
-	</form>
-	<table id="userTable">
-	  <tr>
-		<th>User</th>
-		<th>Status</th>
-		<th>Options</th>
-	  </tr>
-	  {% for user in users %}
-	  <tr id="{{ user.username }}">
-		<td>{{ user.username }}</td>
-		<td class="{{ user.status }}">{{ user.status }}</td>
-		<td>
-		  <button name="{{ user.username }}" class="deleteButton">Delete</button>
-		  {% if user.status != "Registered" %}
-		  <button name="{{ user.username }}" class="resendEmail">Resend Email</button>
-		  {% endif %}
-		</td>
-	  </tr>
-	  {% endfor %}
-	</table>
+<div id="container">
+    <div id="cont">
+        <h1>Admin Controls</h1>
+        <a href="/">Home</a>
+        <h2>Users</h2>
+        <h3>Create New User!</h3>
+        <form class="new_user">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}" />
+          <input type="text" name="email" placeholder="User's Email Address"/>
+          <span id="alreadyExists" class="error">A user with that email already exists!</span>
+          <br />
+          <input type="submit" value="Submit">
+        </form>
+        <table id="userTable">
+          <tr>
+            <th>User</th>
+            <th>Status</th>
+            <th>Options</th>
+          </tr>
+          {% for user in users %}
+          <tr id="{{ user.username }}">
+            <td>{{ user.username }}</td>
+            <td class="{{ user.status.value }}">{{ user.status.value }}</td>
+            <td>
+              <button name="{{ user.username }}" class="deleteButton">Delete</button>
+              {% if user.status != "Registered" %}
+              <button name="{{ user.username }}" class="resendEmail">Resend Email</button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </table>
+    </div>
+    {% include "footer.html" %}
+</div>
 </body>
