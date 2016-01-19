@@ -39,15 +39,28 @@
 	function feedersClick() {
 		window.location.hash = 'feeders'
 		gebi('analyses').style.display = 'none'
+		gebi('edition').style.display = 'none'
 		gebi('feeders').style.display = 'inline'
 		gebi('analysesTab').className = 'tab'
+		gebi('editionTab').className = 'tab'
 		gebi('feedersTab').className = 'tab tabSelected'
 	}
 	function analysesClick() {
 		window.location.hash = ''
 		gebi('analyses').style.display = 'inline'
+		gebi('edition').style.display = 'none'
 		gebi('feeders').style.display = 'none'
 		gebi('analysesTab').className = 'tab tabSelected'
+		gebi('editionTab').className = 'tab'
+		gebi('feedersTab').className = 'tab'
+	}
+	function editionClick() {
+		window.location.hash = ''
+		gebi('analyses').style.display = 'none'
+		gebi('edition').style.display = 'inline'
+		gebi('feeders').style.display = 'none'
+		gebi('analysesTab').className = 'tab'
+		gebi('editionTab').className = 'tab tabSelected'
 		gebi('feedersTab').className = 'tab'
 	}
 	</script>
@@ -62,6 +75,7 @@
 	<div id='toolbar'>
 		<p id='analysesTab' class='tab tabSelected' onclick='analysesClick()'>Models</p>
 		<p id='feedersTab' class='tab' style='' onclick='feedersClick()'>Feeders</p>
+		<p id='editionTab' class='tab' style='' onclick='editionClick()'>Edit</p>
 		<p id='accountTab' class='tab' style='float: right;' onclick='dropPill(this, "Account")'>Account ▾</p>
 		<ul class='menu right'>
 		<li><a href="logout">Log Out</a></li>
@@ -109,6 +123,11 @@
 			<button id="createModel" onclick="location.href = '/newModel/'+gebi('modelName').value">Create Model</button>
 		</div>
 	</div>
+	<div id='edition'>
+		<div>
+			<iframe width=100% height="80%" name="editor" src="/id#background=custom:http://52.30.29.154/osm_tiles/{z}/{x}/{y}.png&map=16.07/-92.30491/38.93961"></iframe>
+		</div>
+	</div>>
 	<div id='feeders'>
 		<div class='content'>
 			<table class="sortable">
@@ -129,14 +148,6 @@
 						<td>{{ feeder.editDate }}</td>
 					</tr>
 					{% endfor %}
-
-                    <tr>
-                        <td>public</td>
-                        <td><a href="./feeder/geo/public/Test iD visualisation">Test iD visualisation</a></td>
-                        <td>Ready</td>
-                        <td>2015-10-15 12:15:25</td>
-                    </tr>
-
 				</tbody>
 			</table>
 		</div>
@@ -235,5 +246,7 @@
 
 <script>
 	if (window.location.hash=='#feeders') {gebi('feedersTab').click()}
+	else if (window.location.hash=='#edit') {gebi('editionTab').click()}
+	else {gebi('analysesTab').click()}
 </script>
 </body>
