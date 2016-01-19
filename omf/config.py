@@ -83,7 +83,7 @@ class ProductionConfig(Dp2Config):
 
     SMTP_SERVICE_NAME = 'omf_smtp_service'
     SESSION_SERVICE_NAME = 'omf_redis_session_database'
-    USER_DATABASE_SERVICE_NAME = 'ros-service'
+    USER_DATABASE_SERVICE_NAME = 'geomf-service'
     PERMANENT_SESSION_LIFETIME = 21600
 
 

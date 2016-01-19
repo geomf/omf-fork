@@ -34,4 +34,4 @@ services:
 - omf_smtp_service
 # to create this service use: cf cs hdfs free hdfs-instance
 - hdfs-instance
-- ros-service
+- geomf-service
