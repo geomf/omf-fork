@@ -711,7 +711,8 @@ def root():
         except:
             continue
     return render_template("home.html", models=allModels, feeders=allFeeders + conversions,
-                           current_user=user.username, is_admin=user.role == Role.ADMIN.value, modelNames=models.__all__)
+                           current_user=user.username, is_admin=user.role == Role.ADMIN.value,
+                           modelNames=models.__all__, mod_tile_bg_proxy=the_config.MOD_TILE_BG_PROXY)
 
 
 @app.route("/delete/<objectType>/<owner>/<objectName>", methods=["POST"])
