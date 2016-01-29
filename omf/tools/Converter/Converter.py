@@ -66,7 +66,7 @@ class Converter(object):
     feeder_config_types = ["climate", "player", "recorder", "volt_var_control"]
 
     @staticmethod
-    def convert(feeder_path, db_address, lon, lat):
+    def convert(feeder_path, db_address, lon, lat, user_id):
         logging.warning("Converting feeder: {}".format(feeder_path))
         with Converter.fs.open(feeder_path) as data_file:
             data = json.load(data_file)
@@ -84,7 +84,7 @@ class Converter(object):
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        feeder = Feeder(basename(feeder_path), lon, lat)
+        feeder = Feeder(basename(feeder_path), lon, lat, user_id)
         session.add(feeder)
         session.flush()
 

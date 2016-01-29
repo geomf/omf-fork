@@ -19,6 +19,7 @@ from flask_login import UserMixin
 
 class User(db.Model, UserMixin):
     __tablename__ = "users"
+    id = db.Column(db.Integer, nullable=False)
     username = db.Column(db.String(80), primary_key=True)
     reg_key = db.Column(db.String(80), nullable =True)
     timestamp = db.Column(db.TIMESTAMP(timezone=True), nullable =True)
@@ -40,6 +41,9 @@ class User(db.Model, UserMixin):
             self.role = role
 
     def get_id(self): return self.username
+
+    def get_user_id(self):
+        return self.id
 
     def verify_password(self, password):
         return pbkdf2_sha512.verify(password, self.password_digest)

@@ -24,12 +24,14 @@ class Feeder(Base):
     config = Column(postgres.JSON)
     lat = Column(Integer)
     lon = Column(Integer)
+    user_id = Column(Integer)
 
-    def __init__(self, name, lon, lat):
+    def __init__(self, name, lon, lat, user_id):
         self.name = name
         lon_lat = Feeder.lon_lat_to_mercator(lon, lat)
         self.lon = lon_lat[0]
         self.lat = lon_lat[1]
+        self.user_id = user_id
 
     def set_config(self, configList):
         self.config = configList

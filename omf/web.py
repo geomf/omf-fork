@@ -594,7 +594,7 @@ def importBackground(owner, feederName, convertFunc, convertArgs):
     logger.info('Save new feeder %s as new json file', feederName)
     fs.save(user_feeder_folder + file_name, json.dumps(newFeeder, indent=4))
     fs.remove(user_conversion_folder + file_name)
-    Converter.convert(user_feeder_folder + file_name, the_config.POSTGIS_DB_URI, _LON, _LAT)
+    Converter.convert(user_feeder_folder + file_name, the_config.POSTGIS_DB_URI, _LON, _LAT, flask_login.current_user.id)
 
 
 @app.route("/newBlankFeeder/", methods=["POST"])
@@ -750,7 +750,9 @@ def uniqObjName(objtype, owner, name):
 
 @app.route("/id")
 def id():
-    return redirect(url_for('static', filename='id/index.html'))
+    user_id = flask_login.current_user.id
+    user_role = flask_login.current_user.role
+    return redirect(url_for('static', filename='id/index.html', user_id=user_id, user_role=user_role))
 
 
 if __name__ == "__main__":

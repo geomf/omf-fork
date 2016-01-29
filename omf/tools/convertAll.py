@@ -25,5 +25,5 @@ i = 0.0
 
 for file in listdir('../data/Feeder/public/'):
     feeder_path = join("data/Feeder/public/", file)
-    Converter.convert(feeder_path, 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development', -92.3395017 + i, 38.9589246)
+    Converter.convert(feeder_path, 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development', -92.3395017 + i, 38.9589246, 0)
     i += 0.5
