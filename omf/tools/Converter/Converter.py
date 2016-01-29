@@ -27,6 +27,7 @@ from omf.tools.Converter.BaseElements.Configuration import Configuration
 from omf.tools.Converter.BaseElements.Feeder import Feeder
 from omf.tools.Converter.Elements import *
 import omf.filesystem
+import hashlib
 
 class Converter(object):
     ros_server = 'http://ros.hutchpcn15.infra-host.com'
@@ -66,6 +67,17 @@ class Converter(object):
     feeder_config_types = ["climate", "player", "recorder", "volt_var_control"]
 
     @staticmethod
+    def calculate_lat_lon(feeder_name):
+        hashed = int(hashlib.sha1(feeder_name).hexdigest(), 16)
+        lat = hashed % (2**32)
+        lon = hashed / (2**32) % (2**32)
+        lat -= (2**31)
+        lon -= (2**31)
+        lat /= (2.0**27)
+        lon /= (2.0**26)	# US is more wider than higher on map ;P
+        return lat, lon
+
+    @staticmethod
     def convert(feeder_path, db_address, lon, lat, user_id):
         logging.warning("Converting feeder: {}".format(feeder_path))
         with Converter.fs.open(feeder_path) as data_file:
@@ -84,7 +96,8 @@ class Converter(object):
         Session = sessionmaker(bind=engine)
         session = Session()
 
-        feeder = Feeder(basename(feeder_path), lon, lat, user_id)
+        offset_lat, offset_lon = Converter.calculate_lat_lon(basename(feeder_path))
+        feeder = Feeder(basename(feeder_path), lon + offset_lon, lat + offset_lat, user_id)
         session.add(feeder)
         session.flush()
 
