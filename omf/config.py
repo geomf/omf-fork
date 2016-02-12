@@ -54,7 +54,7 @@ class Dp2Config(Config):
 
         smtp_service = self.__get_service_configuration('smtp', self.SMTP_SERVICE_NAME)
         smtp_credentials = smtp_service['credentials']
-        self.MAIL_SERVER = smtp_credentials['hostname']
+        self.MAIL_SERVER = smtp_credentials['host']
         self.MAIL_PORT = int(smtp_credentials['port'])
         self.MAIL_USE_TLS = True
         self.MAIL_USERNAME = smtp_credentials['username']

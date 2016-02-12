@@ -17,13 +17,13 @@ import json
 
 def get_service_credentials(service_name):
     vcap_services = os.getenv('VCAP_SERVICES')
-    if vcap_services:
-        return json.loads(vcap_services)[service_name][0]['credentials']
-    elif service_name == 'cdh':
-        return {
-            'zk_host': '172.17.0.2'
-        }
-    else:
+    try:
+        if vcap_services:
+            return json.loads(vcap_services)[service_name][0]['credentials']
+        else:
+            return {}
+    except KeyError:
+        """Service not available in VCAP_SERVICES"""
         return {}
 
 def get_space_name():
