@@ -2,7 +2,6 @@
 ''' Web server for model-oriented OMF interface. '''
 
 from flask import Flask, send_from_directory, request, redirect, render_template, session, abort, jsonify, Response, url_for
-from flask_sslify import SSLify
 from multiprocessing import Process
 import json
 import os
@@ -31,7 +30,6 @@ from omf.common.userStatus import UserStatus
 logger = logging.getLogger(__name__)
 
 app = Flask("web")
-sslify = SSLify(app)
 app.config.from_object(the_config)
 
 fs = filesystem.Filesystem().fs
