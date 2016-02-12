@@ -19,8 +19,8 @@ from flask_login import UserMixin
 
 class User(db.Model, UserMixin):
     __tablename__ = "users"
-    id = db.Column(db.Integer, nullable=False)
-    username = db.Column(db.String(80), primary_key=True)
+    id = db.Column(db.Integer, nullable=False, primary_key=True)
+    username = db.Column(db.String(80), nullable=False)
     reg_key = db.Column(db.String(80), nullable =True)
     timestamp = db.Column(db.TIMESTAMP(timezone=True), nullable =True)
     registered = db.Column(db.Boolean, nullable=True)
