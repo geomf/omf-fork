@@ -28,7 +28,6 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/user.db'
     PERSISTENCE_TYPE = 'DATABASE'
     POSTGIS_DB_URI = 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development'
-    MOD_TILE_BG_PROXY = 'http://mod-tile-bg.hutchpcn15.infra-host.com'
 
 class DebugConfig(Config):
     pass
@@ -68,6 +67,8 @@ class Dp2Config(Config):
         self.SQLALCHEMY_DATABASE_URI = user_database_credentials['uri']
         self.POSTGIS_DB_URI = user_database_credentials['uri']
         self.MOD_TILE_BG_PROXY = user_database_credentials['mod-tile-bg-proxy']
+        self.MOD_TILE_FG = user_database_credentials['mod-tile-fg-host']
+        self.ROS_HOST = user_database_credentials['ros-host']
 
     def __get_service_configuration(self, service_type, service_name):
         service = next((service for service in self.vcap_services[service_type]

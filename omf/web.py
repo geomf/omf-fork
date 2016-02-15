@@ -750,7 +750,9 @@ def uniqObjName(objtype, owner, name):
 def id():
     user_id = flask_login.current_user.id
     user_role = flask_login.current_user.role
-    return redirect(url_for('static', filename='id/index.html', user_id=user_id, user_role=user_role))
+    return redirect(url_for('static', filename='id/index.html', user_id=user_id, user_role=user_role,
+                            mod_tile_bg=the_config.MOD_TILE_BG_PROXY, mod_tile_fg=the_config.MOD_TILE_FG,
+                            ros_host=the_config.ROS_HOST))
 
 
 if __name__ == "__main__":

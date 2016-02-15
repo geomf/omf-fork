@@ -27,10 +27,11 @@ from omf.tools.Converter.BaseElements.Configuration import Configuration
 from omf.tools.Converter.BaseElements.Feeder import Feeder
 from omf.tools.Converter.Elements import *
 import omf.filesystem
+from omf.config import the_config
 import hashlib
 
 class Converter(object):
-    ros_server = 'http://ros.hutchpcn15.infra-host.com'
+    ros_server = the_config.ROS_HOST
     fs = omf.filesystem.Filesystem().fs
     read_type = {
                      "triplex_meter": NodeElements.TriplexMeter,
