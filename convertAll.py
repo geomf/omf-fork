@@ -15,12 +15,17 @@ from os import listdir
 from os.path import join
 from sqlalchemy.ext.declarative import declarative_base
 from omf.tools.Converter.BaseElements.DB import set_db
-
-db = declarative_base()
-set_db(db)
-
+from omf import filesystem
+from omf.config import the_config
 from omf.tools.Converter.Converter import Converter
 
-for file in listdir('omf/data/Feeder/public/'):
-    feeder_path = join("data/Feeder/public/", file)     # without omf, due to HOME_DIR in filesystem class
-    Converter.convert(feeder_path, 'postgresql://<db_user>:<db_password>@localhost:5432/ROS_development', -92.3395017, 38.9589246, 1)
+
+def import_all():
+    db = declarative_base()
+    set_db(db)
+
+    fs = filesystem.Filesystem().fs
+
+    for file in fs.listdir('data/Feeder/public/'):
+        feeder_path = join("data/Feeder/public/", file)     # without omf, due to HOME_DIR in filesystem class
+        Converter.convert(feeder_path, the_config.POSTGIS_DB_URI, -92.3395017, 38.9589246, 1)

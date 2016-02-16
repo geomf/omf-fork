@@ -62,7 +62,7 @@ class Dp2Config(Config):
 
         self.SENDER_EMAIL = os.environ['SENDER_EMAIL']
 
-        user_database_service = self.__get_service_configuration('user-provided', self.USER_DATABASE_SERVICE_NAME)
+        user_database_service = self.__get_service_configuration('user-provided')
         user_database_credentials = user_database_service['credentials']
         self.SQLALCHEMY_DATABASE_URI = user_database_credentials['uri']
         self.POSTGIS_DB_URI = user_database_credentials['uri']
@@ -70,9 +70,9 @@ class Dp2Config(Config):
         self.MOD_TILE_FG = user_database_credentials['mod-tile-fg-host']
         self.ROS_HOST = user_database_credentials['ros-host']
 
-    def __get_service_configuration(self, service_type, service_name):
+    def __get_service_configuration(self, service_type, service_name=""):
         service = next((service for service in self.vcap_services[service_type]
-                                    if service['name'] == service_name), None)
+                                    if service_name == "" or service['name'] == service_name), None)
         if service is None:
             logging.exception('%s service, type: %s not found in VCAP_SERVICES env variable', service_name, service_type)
             raise EnvironmentError('%s service, type: %s not found'.format(service_name, service_type))
@@ -87,7 +87,6 @@ class ProductionConfig(Dp2Config):
 
     SMTP_SERVICE_NAME = 'omf_smtp_service'
     SESSION_SERVICE_NAME = 'omf_redis_session_database'
-    USER_DATABASE_SERVICE_NAME = 'geomf-service'
     PERMANENT_SESSION_LIFETIME = 21600
 
 

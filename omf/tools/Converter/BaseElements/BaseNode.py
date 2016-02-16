@@ -47,10 +47,10 @@ class BaseNode(Element, Base):
     @staticmethod
     def validate(element):
         if "longitude" not in element:
-            logging.warning("Warning: object without a longitude - {}".format(element))
+            logging.debug("Warning: object without a longitude - {}".format(element))
             return False
         if "latitude" not in element:
-            logging.warning("Warning: object without a latitude - {}".format(element))
+            logging.debug("Warning: object without a latitude - {}".format(element))
             return False
         return Element.validate(element)
 

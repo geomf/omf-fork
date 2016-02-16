@@ -24,6 +24,6 @@ class ChildNode(BaseNode):
     @staticmethod
     def validate(element):
         if "parent" not in element:
-            logging.warning("Warning: object without a parent - {}".format(element))
+            logging.debug("Warning: object without a parent - {}".format(element))
             return False
         return BaseNode.validate(element)
